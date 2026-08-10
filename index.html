@@ -1,0 +1,76 @@
+<!doctype html><html lang="bn"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bishwas ERP</title>
+<style>
+body{font-family:Arial,sans-serif;margin:0;background:#f4f7fb;color:#172033}.top{background:#1457c5;color:white;padding:18px;font-size:24px;font-weight:bold}.wrap{max-width:900px;margin:auto;padding:14px}.menu{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}.menu button,.btn{padding:12px;border:0;border-radius:9px;background:white;border:1px solid #ddd;text-align:left}.btn{background:#1457c5;color:white;text-align:center;font-weight:bold}.card{background:white;border-radius:14px;padding:15px;margin:10px 0;box-shadow:0 2px 8px #0001}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.stat{font-size:13px}.stat b{display:block;font-size:24px;margin-top:5px}label{display:block;margin:9px 0 4px;font-size:13px;font-weight:bold}input,select,textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccd2da;border-radius:8px}textarea{min-height:80px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}.page{display:none}.page.on{display:block}.muted{color:#667085;font-size:12px}.login{max-width:400px;margin:8vh auto}.hide{display:none}
+</style>
+<body>
+<div id="login" class="wrap login card"><h1>Bishwas ERP</h1><p class="muted">Complete Business Management System</p>
+<label>Mobile</label><input id="lm" placeholder="01700000000"><label>Password</label><input id="lp" type="password" placeholder="1234">
+<button class="btn" style="width:100%;margin-top:12px" onclick="enter()">LOGIN</button>
+<p class="muted">Demo: 01700000000 / 1234</p></div>
+
+<div id="app" class="hide"><div class="top">Bishwas ERP <div style="font-size:12px;font-weight:normal" id="company">Company</div></div>
+<div class="wrap"><div class="menu" id="menu"></div>
+<section id="dashboard" class="page on"><h2>Dashboard</h2><div class="grid">
+<div class="card stat">Dealers<b id="nd">0</b></div><div class="card stat">Products<b id="np">0</b></div><div class="card stat">Production<b id="nprod">0</b></div><div class="card stat">Due<b id="due">৳0</b></div></div>
+<div class="card"><h3>Recent Activity</h3><div id="recent"></div></div></section>
+
+<section id="companyPage" class="page"><h2>Company Setup</h2><div class="card">
+<label>Company Name</label><input id="cn"><label>Phone</label><input id="cp"><label>Address</label><input id="ca"><button class="btn" onclick="saveCompany()">SAVE</button></div></section>
+
+<section id="dealers" class="page"><h2>Dealers</h2><div class="card">
+<label>Dealer Code</label><input id="dc"><label>Dealer Name</label><input id="dn"><label>Phone</label><input id="dp"><label>Address</label><input id="da"><label>Opening Balance</label><input id="dob" type="number" value="0"><button class="btn" onclick="dealerAdd()">ADD DEALER</button></div>
+<div class="card"><table><thead><tr><th>Code</th><th>Name</th><th>Phone</th><th>Balance</th></tr></thead><tbody id="dt"></tbody></table></div></section>
+
+<section id="products" class="page"><h2>Products</h2><div class="card">
+<label>Product Code</label><input id="pc"><label>Product Name</label><input id="pn"><label>Size</label><input id="ps"><label>Unit</label><select id="pu"><option>pcs</option><option>kg</option><option>gram</option><option>liter</option><option>ml</option><option>carton</option><option>bag</option></select><label>Selling Price</label><input id="pp" type="number"><button class="btn" onclick="productAdd()">ADD PRODUCT</button></div>
+<div class="card"><table><thead><tr><th>Code</th><th>Name</th><th>Size</th><th>Stock</th></tr></thead><tbody id="pt"></tbody></table></div></section>
+
+<section id="raw" class="page"><h2>Raw Materials</h2><div class="card">
+<label>Material Code</label><input id="rc"><label>Material Name</label><input id="rn"><label>Unit</label><select id="ru"><option>kg</option><option>gram</option><option>liter</option><option>ml</option><option>pcs</option><option>bag</option><option>carton</option></select><label>Opening Stock</label><input id="rs" type="number"><button class="btn" onclick="rawAdd()">ADD MATERIAL</button></div>
+<div class="card"><table><thead><tr><th>Code</th><th>Material</th><th>Unit</th><th>Stock</th></tr></thead><tbody id="rt"></tbody></table></div></section>
+
+<section id="purchase" class="page"><h2>Purchase</h2><div class="card"><label>Material</label><select id="bm"></select><label>Quantity</label><input id="bq" type="number"><label>Amount</label><input id="ba" type="number"><button class="btn" onclick="purchase()">SAVE PURCHASE</button></div></section>
+
+<section id="production" class="page"><h2>Production</h2><div class="card"><label>Product</label><select id="pr"></select><label>Quantity</label><input id="pq" type="number"><label>Batch No.</label><input id="batch"><button class="btn" onclick="production()">SAVE PRODUCTION</button></div></section>
+
+<section id="delivery" class="page"><h2>Delivery / Invoice</h2><div class="card"><label>Dealer</label><select id="dd"></select><label>Invoice No.</label><input id="inv"><label>Product</label><select id="di"></select><label>Quantity</label><input id="dq" type="number"><label>Delivery Amount</label><input id="dam" type="number"><label>Payment Received</label><input id="pay" type="number" value="0"><button class="btn" onclick="delivery()">SAVE DELIVERY</button></div></section>
+
+<section id="complaint" class="page"><h2>Complaint & Suggestion</h2><div class="card"><label>Dealer</label><select id="cd"></select><label>Type</label><select id="ct"><option>Complaint</option><option>Suggestion</option></select><label>Message</label><textarea id="cm"></textarea><button class="btn" onclick="complaint()">SUBMIT</button></div><div class="card"><table><thead><tr><th>Date</th><th>Dealer</th><th>Type</th><th>Status</th></tr></thead><tbody id="cmt"></tbody></table></div></section>
+
+<section id="reports" class="page"><h2>Reports</h2><div class="card"><h3>Dealer Balance</h3><div id="report"></div></div><div class="card"><h3>Product Stock</h3><div id="stock"></div></div></section>
+<section id="activity" class="page"><h2>Activity Log</h2><div class="card"><table><thead><tr><th>Time</th><th>Action</th><th>Details</th></tr></thead><tbody id="at"></tbody></table></div></section>
+</div></div>
+<script>
+let db=JSON.parse(localStorage.getItem("bishwasERP")||"null")||{company:{name:"Demo Company",phone:"",address:""},dealers:[],products:[],raw:[],activity:[],complaints:[]};
+const menus=[["dashboard","🏠 Dashboard"],["companyPage","🏢 Company Setup"],["dealers","👥 Dealers"],["products","📦 Products"],["raw","🧪 Raw Materials"],["purchase","🛒 Purchase"],["production","🏭 Production"],["delivery","🚚 Delivery"],["complaint","💬 Complaint"],["reports","📊 Reports"],["activity","🔐 Activity Log"]];
+function save(){localStorage.setItem("bishwasERP",JSON.stringify(db))}
+function log(a,d){db.activity.unshift({t:new Date().toLocaleString("en-GB"),a,d});save()}
+function enter(){login.classList.add("hide");app.classList.remove("hide");render();log("Login","Admin logged in")}
+function openPage(id){document.querySelectorAll(".page").forEach(x=>x.classList.remove("on"));document.getElementById(id).classList.add("on")}
+function render(){
+menu.innerHTML=menus.map(x=>`<button onclick="openPage('${x[0]}')">${x[1]}</button>`).join("");
+company.textContent=db.company.name||"Company";cn.value=db.company.name;cp.value=db.company.phone;ca.value=db.company.address;
+nd.textContent=db.dealers.length;np.textContent=db.products.length;nprod.textContent=db.products.reduce((s,x)=>s+x.stock,0);due.textContent="৳"+db.dealers.reduce((s,x)=>s+x.balance,0).toLocaleString();
+dt.innerHTML=db.dealers.map(x=>`<tr><td>${x.code}</td><td>${x.name}</td><td>${x.phone}</td><td>৳${x.balance.toLocaleString()}</td></tr>`).join("");
+pt.innerHTML=db.products.map(x=>`<tr><td>${x.code}</td><td>${x.name}</td><td>${x.size}</td><td>${x.stock} ${x.unit}</td></tr>`).join("");
+rt.innerHTML=db.raw.map(x=>`<tr><td>${x.code}</td><td>${x.name}</td><td>${x.unit}</td><td>${x.stock}</td></tr>`).join("");
+bm.innerHTML=db.raw.map((x,i)=>`<option value="${i}">${x.code} - ${x.name}</option>`).join("");
+pr.innerHTML=di.innerHTML=db.products.map((x,i)=>`<option value="${i}">${x.code} - ${x.name}</option>`).join("");
+dd.innerHTML=cd.innerHTML=db.dealers.map((x,i)=>`<option value="${i}">${x.code} - ${x.name}</option>`).join("");
+report.innerHTML=db.dealers.map(x=>`<p>${x.code} — ${x.name}: <b>৳${x.balance.toLocaleString()}</b></p>`).join("")||"No dealers";
+stock.innerHTML=db.products.map(x=>`<p>${x.name} ${x.size}: <b>${x.stock} ${x.unit}</b></p>`).join("")||"No products";
+cmt.innerHTML=db.complaints.map(x=>`<tr><td>${x.date}</td><td>${x.dealer}</td><td>${x.type}</td><td>${x.status}</td></tr>`).join("");
+at.innerHTML=db.activity.map(x=>`<tr><td>${x.t}</td><td>${x.a}</td><td>${x.d}</td></tr>`).join("");
+recent.innerHTML=db.activity.slice(0,8).map(x=>`<p><b>${x.a}</b> — ${x.d}<br><span class="muted">${x.t}</span></p>`).join("")||"No activity";
+}
+function saveCompany(){db.company={name:cn.value,phone:cp.value,address:ca.value};log("Company Updated",db.company.name);save();render()}
+function dealerAdd(){if(!dc.value||!dn.value)return alert("Dealer Code and Name দিন");let b=+dob.value||0;db.dealers.push({code:dc.value,name:dn.value,phone:dp.value,address:da.value,balance:b});log("Dealer Added",dc.value+" - "+dn.value);save();render();alert("Dealer added")}
+function productAdd(){if(!pc.value||!pn.value)return alert("Product Code and Name দিন");db.products.push({code:pc.value,name:pn.value,size:ps.value,unit:pu.value,price:+pp.value||0,stock:0});log("Product Added",pc.value+" - "+pn.value);save();render();alert("Product added")}
+function rawAdd(){if(!rc.value||!rn.value)return alert("Material Code and Name দিন");db.raw.push({code:rc.value,name:rn.value,unit:ru.value,stock:+rs.value||0});log("Raw Material Added",rc.value+" - "+rn.value);save();render();alert("Material added")}
+function purchase(){let r=db.raw[+bm.value];if(!r)return;let q=+bq.value||0;r.stock+=q;log("Purchase Added",r.name+" + "+q+" "+r.unit);save();render();alert("Purchase saved")}
+function production(){let p=db.products[+pr.value];if(!p)return;let q=+pq.value||0;p.stock+=q;log("Production Added",p.name+" + "+q+" "+p.unit+" | Batch "+batch.value);save();render();alert("Production saved")}
+function delivery(){let d=db.dealers[+dd.value],p=db.products[+di.value];if(!d||!p)return;let q=+dq.value||0,a=+dam.value||0,paym=+pay.value||0;p.stock=Math.max(0,p.stock-q);d.balance+=a-paym;log("Delivery Added","Invoice "+inv.value+" → "+d.name);save();render();alert("Delivery saved")}
+function complaint(){let d=db.dealers[+cd.value];if(!d)return;db.complaints.push({date:new Date().toLocaleDateString(),dealer:d.name,type:ct.value,msg:cm.value,status:"Pending"});log("Complaint/Suggestion Added",d.name);save();cm.value="";render();alert("Submitted")}
+render();
+</script></body></html>
