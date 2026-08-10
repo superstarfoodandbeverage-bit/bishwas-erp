@@ -22,13 +22,18 @@ body{font-family:Arial;margin:0;background:#f4f7fb;color:#172033}.top{background
 <div class="row"><button onclick="delivery()">💾 SAVE DELIVERY</button><button onclick="sms()">📱 SEND SMS</button></div>
 <label>SMS Preview</label><textarea id="preview" rows="8" readonly></textarea></div></section>
 
-<section id="production" class="hidden"><div class="card"><h2>📦 Production</h2><label>Product</label><input id="pp"><label>Quantity</label><input id="pq" type="number"><button onclick="production()">SAVE PRODUCTION</button></div></section>
+<section id="production" class="hidden"><div class="card"><h2>📦 Production</h2>
+<label>Product</label><input id="pp"><label>Quantity</label><input id="pq" type="number">
+<button onclick="production()">SAVE PRODUCTION</button>
+<hr><h3>📋 Production History</h3><div id="productionHistory">No production data</div>
+</div></section>
 <section id="purchase" class="hidden"><div class="card"><h2>🛒 Purchase / Raw Material</h2><label>Material</label><input id="mat"><label>Quantity</label><input id="mq" type="number"><label>Purchase Amount</label><input id="ma" type="number"><button onclick="purchase()">SAVE PURCHASE</button></div></section>
 <section id="expense" class="hidden"><div class="card"><h2>💸 Expense</h2><label>Expense Name</label><input id="en"><label>Amount</label><input id="ea" type="number"><button onclick="expense()">SAVE EXPENSE</button></div></section>
 <section id="dealer" class="hidden"><div class="card"><h2>👤 Dealer</h2><label>Dealer Name</label><input id="newn"><label>Mobile</label><input id="newp"><button onclick="addDealer()">ADD DEALER</button><div id="list"></div></div></section>
 </div>
 <script>
-let db=JSON.parse(localStorage.getItem("bishwasERPv3")||'{"sales":0,"collected":0,"production":0,"delivery":0,"raw":0,"purchase":0,"expense":0,"dealers":{}}');
+let db=JSON.parse(localStorage.getItem("bishwasERPv3")||'{"sales":0,"collected":0,"production":0,"delivery":0,"raw":0,"purchase":0,"expense":0,"dealers":{},"productionEntries":[]}');
+db.productionEntries=db.productionEntries||[];
 const money=n=>"৳"+Number(n||0).toLocaleString("en-BD");
 function save(){localStorage.setItem("bishwasERPv3",JSON.stringify(db));render()}
 function show(x){["dash","delivery","production","purchase","expense","dealer"].forEach(i=>document.getElementById(i).classList.add("hidden"));document.getElementById(x).classList.remove("hidden");render()}
@@ -36,9 +41,29 @@ function addDealer(){let n=newn.value.trim();if(!n)return alert("Dealer name দ
 function delivery(){let n=dn.value.trim(),a=+da.value||0,p=+pay.value||0,q=+dq.value||0;if(!n||!a)return alert("Dealer এবং Total Price দিন");db.sales+=a;db.collected+=p;db.delivery+=q;db.dealers[n]??={sales:0,collected:0,delivery:0,phone:""};let d=db.dealers[n];d.phone=phone.value||d.phone;d.sales+=a;d.collected+=p;d.delivery+=q;save();preview.value=makeSMS();alert("Delivery saved")}
 function makeSMS(){let a=+da.value||0,p=+pay.value||0,o=+old.value||0;return `Bishwas ERP\nপ্রিয় ${dn.value||"পার্টি"},\nআপনার অর্ডার সফলভাবে ডেলিভারি হয়েছে।\nপণ্য: ${dp.value||""} – ${dq.value||0} ${du.value||"বস্তা"}\nমোট মূল্য: ৳${a.toLocaleString("en-BD")}\nবাকি: ৳${(o+a-p).toLocaleString("en-BD")}\nচালান নং: ${inv.value||"N/A"}\nধন্যবাদ।`}
 function sms(){if(!phone.value)return alert("Dealer Mobile Number দিন");preview.value=makeSMS();location.href="sms:"+phone.value+"?body="+encodeURIComponent(preview.value)}
-function production(){db.production+=+pq.value||0;save();alert("Production saved")}
+function production(){
+let product=pp.value.trim(),q=+pq.value||0;
+if(!product||q<=0)return alert("Product ও সঠিক Quantity দিন");
+db.productionEntries.push({id:Date.now(),product,qty:q,date:new Date().toLocaleString("bn-BD")});
+db.production=db.productionEntries.reduce((t,e)=>t+Number(e.qty||0),0);
+save();pp.value="";pq.value="";alert("Production saved");
+}
+function editProduction(id){
+let e=db.productionEntries.find(x=>x.id===id);if(!e)return;
+let q=prompt("সঠিক Quantity দিন",e.qty);if(q===null)return;
+q=Number(q);if(q<0||Number.isNaN(q))return alert("সঠিক সংখ্যা দিন");
+e.qty=q;e.date=new Date().toLocaleString("bn-BD");
+db.production=db.productionEntries.reduce((t,x)=>t+Number(x.qty||0),0);save();
+}
+function deleteProduction(id){
+if(!confirm("এই Production entry মুছে ফেলবেন?"))return;
+db.productionEntries=db.productionEntries.filter(x=>x.id!==id);
+db.production=db.productionEntries.reduce((t,x)=>t+Number(x.qty||0),0);save();
+}
 function purchase(){db.raw+=+mq.value||0;db.purchase+=+ma.value||0;save();alert("Purchase saved")}
 function expense(){db.expense+=+ea.value||0;save();alert("Expense saved")}
-function render(){sales.textContent=money(db.sales);collected.textContent=money(db.collected);due.textContent=money(db.sales-db.collected);prod.textContent=db.production;del.textContent=db.delivery;raw.textContent=db.raw;purch.textContent=money(db.purchase);exp.textContent=money(db.expense);profit.textContent=money(db.sales-db.purchase-db.expense);let a=Object.entries(db.dealers);dealerTable.innerHTML=a.length?`<table><tr><th>Dealer</th><th>Sales</th><th>Collected</th><th>Due</th><th>Delivery</th></tr>${a.map(([n,d])=>`<tr><td>${n}</td><td>${money(d.sales)}</td><td>${money(d.collected)}</td><td>${money(d.sales-d.collected)}</td><td>${d.delivery}</td></tr>`).join("")}</table>`:"No dealer data";list.innerHTML=a.map(([n,d])=>`<p><b>${n}</b> — ${d.phone||"No mobile"} — Due: ${money(d.sales-d.collected)}</p>`).join("")||"No dealer"}
+function render(){sales.textContent=money(db.sales);collected.textContent=money(db.collected);due.textContent=money(db.sales-db.collected);prod.textContent=db.production;del.textContent=db.delivery;raw.textContent=db.raw;purch.textContent=money(db.purchase);exp.textContent=money(db.expense);profit.textContent=money(db.sales-db.purchase-db.expense);let a=Object.entries(db.dealers);dealerTable.innerHTML=a.length?`<table><tr><th>Dealer</th><th>Sales</th><th>Collected</th><th>Due</th><th>Delivery</th></tr>${a.map(([n,d])=>`<tr><td>${n}</td><td>${money(d.sales)}</td><td>${money(d.collected)}</td><td>${money(d.sales-d.collected)}</td><td>${d.delivery}</td></tr>`).join("")}</table>`:"No dealer data";list.innerHTML=a.map(([n,d])=>`<p><b>${n}</b> — ${d.phone||"No mobile"} — Due: ${money(d.sales-d.collected)}</p>`).join("")||"No dealer"};
+let ph=document.getElementById("productionHistory");
+if(ph)ph.innerHTML=db.productionEntries.length?`<table><tr><th>Date</th><th>Product</th><th>Qty</th><th>Action</th></tr>${[...db.productionEntries].reverse().map(e=>`<tr><td>${e.date}</td><td>${e.product}</td><td>${e.qty}</td><td><button onclick="editProduction(${e.id})">✏️ Edit</button> <button onclick="deleteProduction(${e.id})">🗑️ Delete</button></td></tr>`).join("")}</table>`:"No production data";
 render();
 </script></body></html>
