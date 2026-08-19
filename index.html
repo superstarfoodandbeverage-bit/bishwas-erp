@@ -1,4 +1,4 @@
- <!doctype html>
+<!doctype html>
 <html lang="bn">
 <head>
 <meta charset="utf-8">
@@ -7,7 +7,7 @@
 <style>
   * { box-sizing: border-box; }
   body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f6f9; }
-  .top { background-color: #0d6efd; color: white; padding: 15px; text-align: center; display: flex; align-items: center; justify-content: center; }
+  .top { background-color: #0d6efd; color: white; padding: 15px; text-align: center; display: flex; align-items: center; justify-content: space-between; }
   
   .logo-badge {
     position: relative;
@@ -16,16 +16,27 @@
     justify-content: center;
   }
   .logo-badge .emoji {
-    font-size: 55px;
+    font-size: 40px;
     line-height: 1;
   }
   .logo-badge .text {
     position: absolute;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 900;
     color: #111111;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+  }
+
+  .role-btn {
+    background: #ffc107;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    color: #000;
+    cursor: pointer;
+    font-size: 12px;
   }
 
   .clock-banner {
@@ -57,24 +68,27 @@
   table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; font-size: 12px; margin-top: 10px; }
   th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
   th { background: #f8f9fa; }
-  .btn-action { padding: 5px 7px; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; margin: 1px; }
+  .btn-action { padding: 5px 8px; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; margin: 1px; text-decoration: none; display: inline-block; }
   .btn-del { background: #dc3545; color: white; }
-  .btn-wa { background: #25D366; color: white; }
+  .btn-wa { background: #25D366; color: white; font-weight: bold; }
   .btn-sms { background: #0d6efd; color: white; }
   .section { display: none; }
   .section.active { display: block; }
   .stock-badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; }
   .stock-positive { background: #d1e7dd; color: #0f5132; }
   .stock-negative { background: #f8d7da; color: #842029; }
+  .admin-only { display: none; }
 </style>
 </head>
 <body>
 
 <div class="top">
+  <div style="width: 70px;"></div>
   <div class="logo-badge">
     <span class="emoji">☀️</span>
     <span class="text">SUN</span>
   </div>
+  <button class="role-btn" id="roleToggleBtn" onclick="toggleRole()">Manager Mode</button>
 </div>
 
 <div class="clock-banner">
@@ -107,7 +121,7 @@
     </div>
   </div>
 
-  <!-- Production Tab (আইটেম যুক্ত করা হয়েছে) -->
+  <!-- Production Tab -->
   <div id="prod" class="section">
     <div class="form-group">
       <h3>নতুন উৎপাদন যোগ করুন</h3>
@@ -125,12 +139,12 @@
       <button class="btn-submit" onclick="saveProd()">সংরক্ষণ করুন</button>
     </div>
     <table>
-      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
+      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th class="admin-only">অ্যাকশন</th></tr></thead>
       <tbody id="pTable"></tbody>
     </table>
   </div>
 
-  <!-- Delivery Tab (আইটেম যুক্ত করা হয়েছে) -->
+  <!-- Delivery Tab -->
   <div id="deli" class="section">
     <div class="form-group">
       <h3>নতুন ডেলিভারি যোগ করুন</h3>
@@ -158,7 +172,7 @@
     </div>
   </div>
 
-  <!-- Product Stock Tab (আইটেমওয়াইজ ফিনিশড গুডস স্টক) -->
+  <!-- Product Stock Tab -->
   <div id="prodStock" class="section">
     <div class="form-group" style="margin-bottom: 10px;">
       <h3>পণ্য ভিত্তিক কারেন্ট স্টক (Finished Goods Stock)</h3>
@@ -194,7 +208,7 @@
       <button class="btn-submit" onclick="saveRMIn()">সংরক্ষণ করুন</button>
     </div>
     <table>
-      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
+      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th class="admin-only">অ্যাকশন</th></tr></thead>
       <tbody id="rmInTable"></tbody>
     </table>
   </div>
@@ -217,7 +231,7 @@
       <button class="btn-submit" onclick="saveRMOut()">সংরক্ষণ করুন</button>
     </div>
     <table>
-      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
+      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th class="admin-only">অ্যাকশন</th></tr></thead>
       <tbody id="rmOutTable"></tbody>
     </table>
   </div>
@@ -243,6 +257,37 @@
 </div>
 
 <script>
+  let isAdmin = false;
+  const ADMIN_PIN = "1234";
+
+  function toggleRole() {
+    if (!isAdmin) {
+      let pin = prompt("Admin PIN ইনপুট দিন:");
+      if (pin === ADMIN_PIN) {
+        isAdmin = true;
+        document.getElementById('roleToggleBtn').innerText = "Admin Mode";
+        document.getElementById('roleToggleBtn').style.background = "#20c997";
+        alert("আপনি এখন Admin হিসাবে লগইন করেছেন।");
+      } else if (pin !== null) {
+        alert("ভুল PIN!");
+      }
+    } else {
+      isAdmin = false;
+      document.getElementById('roleToggleBtn').innerText = "Manager Mode";
+      document.getElementById('roleToggleBtn').style.background = "#ffc107";
+      alert("এখন Manager মোডে ফেরত যাওয়া হয়েছে।");
+    }
+    applyRoleStyles();
+    updateAll();
+  }
+
+  function applyRoleStyles() {
+    let adminElements = document.querySelectorAll('.admin-only');
+    adminElements.forEach(el => {
+      el.style.display = isAdmin ? 'table-cell' : 'none';
+    });
+  }
+
   function updateLiveClock() {
     let d = new Date();
     document.getElementById('liveClock').innerText = d.toLocaleTimeString();
@@ -331,6 +376,7 @@
   }
 
   function delItem(key, i) {
+    if (!isAdmin) return alert('ডাটা ডিলিট করার অধিকার শুধু Admin এর আছে!');
     let list = getStorage(key);
     list.splice(i, 1);
     setStorage(key, list);
@@ -340,11 +386,11 @@
   function sendWA(i) {
     let list = getStorage('deliListDetails');
     let item = list[i];
-    if (!item.phone) return alert('মোবাইল নম্বর দেওয়া নেই!');
+    if (!item.phone) return alert('কাস্টমারের মোবাইল নম্বর দেওয়া নেই!');
     let phone = item.phone.replace(/[^0-9]/g, '');
     if(phone.startsWith('0')) phone = '88' + phone;
     let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-    let msg = `প্রিয় ${item.name},\nSun product থেকে আপনার চালানের তথ্য:\nসময়: ${cleanDate}\nপণ্য: ${item.item}\nপরিমাণ: ${item.qty} ${item.unit || ''}\nমূল্য: ৳${item.amount}\nধন্যবাদ!`;
+    let msg = `প্রিয় ${item.name},\nSun Products থেকে আপনার চালানের রসিদ:\nতারিখ: ${cleanDate}\nপণ্য: ${item.item}\nপরিমাণ: ${item.qty} ${item.unit || ''}\nমোট মূল্য: ৳${item.amount}\nধন্যবাদ!`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
@@ -353,7 +399,7 @@
     let item = list[i];
     if (!item.phone) return alert('মোবাইল নম্বর দেওয়া নেই!');
     let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-    let msg = `Sun product: ${item.name}, Item: ${item.item}, Delivery Qty: ${item.qty} ${item.unit || ''}, Total: ${item.amount} Tk. Date: ${cleanDate}. Dhanyabad!`;
+    let msg = `Sun Product: ${item.name}, Item: ${item.item}, Qty: ${item.qty} ${item.unit || ''}, Total: ${item.amount} Tk. Date: ${cleanDate}. Dhanyabad!`;
     window.open(`sms:${item.phone}?body=${encodeURIComponent(msg)}`, '_self');
   }
 
@@ -379,23 +425,32 @@
 
     // Production Table
     let pHtml = '';
-    prods.forEach((item, i) => pHtml += `<tr><td>${item.date}</td><td>${item.item || 'সাধারণ'}</td><td>${item.qty} ${item.unit || 'পিস'}</td><td><button class="btn-action btn-del" onclick="delItem('prodList', ${i})">Delete</button></td></tr>`);
+    prods.forEach((item, i) => {
+      pHtml += `<tr>
+        <td>${item.date}</td>
+        <td>${item.item || 'সাধারণ'}</td>
+        <td>${item.qty} ${item.unit || 'পিস'}</td>
+        ${isAdmin ? `<td><button class="btn-action btn-del" onclick="delItem('prodList', ${i})">Delete</button></td>` : ''}
+      </tr>`;
+    });
     document.getElementById('pTable').innerHTML = pHtml;
 
     // Delivery Table
     let dHtml = '';
-    delis.forEach((item, i) => dHtml += `<tr>
-      <td>${item.date}</td>
-      <td>${item.name}<br><small>${item.phone || ''}</small></td>
-      <td>${item.item || 'সাধারণ'}</td>
-      <td>${item.qty} ${item.unit || 'পিস'}</td>
-      <td>৳${item.amount || 0}</td>
-      <td>
-        <button class="btn-action btn-wa" onclick="sendWA(${i})">WA</button>
-        <button class="btn-action btn-sms" onclick="sendSMS(${i})">SMS</button>
-        <button class="btn-action btn-del" onclick="delItem('deliListDetails', ${i})">Delete</button>
-      </td>
-    </tr>`);
+    delis.forEach((item, i) => {
+      dHtml += `<tr>
+        <td>${item.date}</td>
+        <td>${item.name}<br><small>${item.phone || ''}</small></td>
+        <td>${item.item || 'সাধারণ'}</td>
+        <td>${item.qty} ${item.unit || 'পিস'}</td>
+        <td>৳${item.amount || 0}</td>
+        <td>
+          <button class="btn-action btn-wa" onclick="sendWA(${i})">WhatsApp</button>
+          <button class="btn-action btn-sms" onclick="sendSMS(${i})">SMS</button>
+          ${isAdmin ? `<button class="btn-action btn-del" onclick="delItem('deliListDetails', ${i})">Delete</button>` : ''}
+        </td>
+      </tr>`;
+    });
     document.getElementById('dTable').innerHTML = dHtml;
 
     // Product Wise Stock Calculation
@@ -438,15 +493,29 @@
 
     // RM In Table
     let rmIHtml = '';
-    rmIns.forEach((item, i) => rmIHtml += `<tr><td>${item.date}</td><td>${item.item}</td><td>${item.qty} ${item.unit || 'কেজি'}</td><td><button class="btn-action btn-del" onclick="delItem('rmInList', ${i})">Delete</button></td></tr>`);
+    rmIns.forEach((item, i) => {
+      rmIHtml += `<tr>
+        <td>${item.date}</td>
+        <td>${item.item}</td>
+        <td>${item.qty} ${item.unit || 'কেজি'}</td>
+        ${isAdmin ? `<td><button class="btn-action btn-del" onclick="delItem('rmInList', ${i})">Delete</button></td>` : ''}
+      </tr>`;
+    });
     document.getElementById('rmInTable').innerHTML = rmIHtml;
 
     // RM Out Table
     let rmOHtml = '';
-    rmOuts.forEach((item, i) => rmOHtml += `<tr><td>${item.date}</td><td>${item.item}</td><td>${item.qty} ${item.unit || 'কেজি'}</td><td><button class="btn-action btn-del" onclick="delItem('rmOutList', ${i})">Delete</button></td></tr>`);
+    rmOuts.forEach((item, i) => {
+      rmOHtml += `<tr>
+        <td>${item.date}</td>
+        <td>${item.item}</td>
+        <td>${item.qty} ${item.unit || 'কেজি'}</td>
+        ${isAdmin ? `<td><button class="btn-action btn-del" onclick="delItem('rmOutList', ${i})">Delete</button></td>` : ''}
+      </tr>`;
+    });
     document.getElementById('rmOutTable').innerHTML = rmOHtml;
 
-    // RM Current Stock calculation per Item
+    // RM Stock Table
     let stockMap = {};
     rmIns.forEach(entry => {
       let key = entry.item.trim().toLowerCase();
@@ -483,6 +552,7 @@
       });
     }
     document.getElementById('rmStockTable').innerHTML = rmSHtml;
+    applyRoleStyles();
   }
   updateAll();
 </script>
