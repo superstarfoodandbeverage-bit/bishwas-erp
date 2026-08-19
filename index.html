@@ -65,6 +65,7 @@
   .qty-group input { flex: 2; }
   .qty-group select { flex: 1; }
   button.btn-submit { background: #198754; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 12px; }
+  .btn-download { background: #0d6efd; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; font-size: 13px; }
   table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; font-size: 12px; margin-top: 10px; }
   th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
   th { background: #f8f9fa; }
@@ -120,6 +121,7 @@
       <div class="card"><div class="stat-title">📥 Raw Mat In</div><div class="stat-val"><span id="rmInVal">0</span></div></div>
       <div class="card"><div class="stat-title">📤 Raw Mat Out</div><div class="stat-val"><span id="rmOutVal">0</span></div></div>
     </div>
+    <button class="btn-download" onclick="downloadAllBackup()">📥 Download Excel Backup (All Data)</button>
   </div>
 
   <!-- Production Tab -->
@@ -165,6 +167,7 @@
       <input type="number" id="dAmount" placeholder="মোট টাকা">
       <button class="btn-submit" onclick="saveDeli()">সংরক্ষণ করুন</button>
     </div>
+    <button class="btn-download" style="background:#198754; margin-bottom:10px;" onclick="downloadDeliExcel()">📊 Download Delivery Report (Excel)</button>
     <div style="overflow-x:auto;">
       <table>
         <thead><tr><th>তারিখ ও সময়</th><th>কাস্টমার</th><th>আইটেম</th><th>পরিমাণ</th><th>মূল্য</th><th>অ্যাকশন</th></tr></thead>
@@ -422,6 +425,61 @@
     let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
     let msg = `Sun Product: ${item.name}, Item: ${item.item}, Qty: ${item.qty} ${item.unit || ''}, Total: ${item.amount} Tk. Date: ${cleanDate}. Dhanyabad!`;
     window.open(`sms:${item.phone}?body=${encodeURIComponent(msg)}`, '_self');
+  }
+
+  function downloadCSV(csvContent, filename) {
+    let blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement("a");
+    let url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function downloadDeliExcel() {
+    let delis = getStorage('deliListDetails');
+    if (delis.length === 0) return alert('ডাউনলোড করার মতো কোনো ডেলিভারি ডাটা নেই!');
+    let csv = "তারিখ,কাস্টমার,ফোন,আইটেম,পরিমাণ,ইউনিট,মূল্য\n";
+    delis.forEach(d => {
+      let cleanDate = d.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+      csv += `"${cleanDate}","${d.name}","${d.phone || ''}","${d.item}","${d.qty}","${d.unit || ''}","${d.amount || 0}"\n`;
+    });
+    downloadCSV(csv, `Delivery_Report_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  function downloadAllBackup() {
+    let prods = getStorage('prodList');
+    let delis = getStorage('deliListDetails');
+    let rmIns = getStorage('rmInList');
+    let rmOuts = getStorage('rmOutList');
+
+    let csv = "--- PRODUCTION DATA ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
+    prods.forEach(p => {
+      let cleanDate = p.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+      csv += `"${cleanDate}","${p.item}","${p.qty}","${p.unit || ''}"\n`;
+    });
+
+    csv += "\n--- DELIVERY DATA ---\nতারিখ,কাস্টমার,ফোন,আইটেম,পরিমাণ,ইউনিট,মূল্য\n";
+    delis.forEach(d => {
+      let cleanDate = d.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+      csv += `"${cleanDate}","${d.name}","${d.phone || ''}","${d.item}","${d.qty}","${d.unit || ''}","${d.amount || 0}"\n`;
+    });
+
+    csv += "\n--- RAW MATERIAL IN ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
+    rmIns.forEach(r => {
+      let cleanDate = r.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+      csv += `"${cleanDate}","${r.item}","${r.qty}","${r.unit || ''}"\n`;
+    });
+
+    csv += "\n--- RAW MATERIAL OUT ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
+    rmOuts.forEach(r => {
+      let cleanDate = r.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+      csv += `"${cleanDate}","${r.item}","${r.qty}","${r.unit || ''}"\n`;
+    });
+
+    downloadCSV(csv, `SUN_Factory_Backup_${new Date().toISOString().slice(0,10)}.csv`);
   }
 
   function updateAll() {
