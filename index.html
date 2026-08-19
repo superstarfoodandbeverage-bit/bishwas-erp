@@ -1,4 +1,4 @@
-<!doctype html>
+    <!doctype html>
 <html lang="bn">
 <head>
 <meta charset="utf-8">
@@ -77,7 +77,8 @@
   .stock-badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; }
   .stock-positive { background: #d1e7dd; color: #0f5132; }
   .stock-negative { background: #f8d7da; color: #842029; }
-  .admin-only { display: none; }
+  .filter-box { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+  .filter-box input { margin-top: 0; }
 </style>
 </head>
 <body>
@@ -139,7 +140,7 @@
       <button class="btn-submit" onclick="saveProd()">সংরক্ষণ করুন</button>
     </div>
     <table>
-      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th class="admin-only">অ্যাকশন</th></tr></thead>
+      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
       <tbody id="pTable"></tbody>
     </table>
   </div>
@@ -172,10 +173,15 @@
     </div>
   </div>
 
-  <!-- Product Stock Tab -->
+  <!-- Product Stock Tab (তারিখ ফিল্টারসহ) -->
   <div id="prodStock" class="section">
     <div class="form-group" style="margin-bottom: 10px;">
       <h3>পণ্য ভিত্তিক কারেন্ট স্টক (Finished Goods Stock)</h3>
+      <div class="filter-box">
+        <label style="font-size:12px; font-weight:bold;">তারিখ বাছাই করুন:</label>
+        <input type="date" id="stockFilterDate" onchange="updateAll()">
+        <button style="padding:6px; margin-top:0; font-size:12px;" onclick="clearDateFilter()">সব তারিখ দেখুন</button>
+      </div>
     </div>
     <table>
       <thead>
@@ -208,7 +214,7 @@
       <button class="btn-submit" onclick="saveRMIn()">সংরক্ষণ করুন</button>
     </div>
     <table>
-      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th class="admin-only">অ্যাকশন</th></tr></thead>
+      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
       <tbody id="rmInTable"></tbody>
     </table>
   </div>
@@ -231,7 +237,7 @@
       <button class="btn-submit" onclick="saveRMOut()">সংরক্ষণ করুন</button>
     </div>
     <table>
-      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th class="admin-only">অ্যাকশন</th></tr></thead>
+      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
       <tbody id="rmOutTable"></tbody>
     </table>
   </div>
@@ -267,7 +273,7 @@
         isAdmin = true;
         document.getElementById('roleToggleBtn').innerText = "Admin Mode";
         document.getElementById('roleToggleBtn').style.background = "#20c997";
-        alert("আপনি এখন Admin হিসাবে লগইন করেছেন।");
+        alert("আপনি Admin হিসাবে যুক্ত আছেন।");
       } else if (pin !== null) {
         alert("ভুল PIN!");
       }
@@ -275,17 +281,8 @@
       isAdmin = false;
       document.getElementById('roleToggleBtn').innerText = "Manager Mode";
       document.getElementById('roleToggleBtn').style.background = "#ffc107";
-      alert("এখন Manager মোডে ফেরত যাওয়া হয়েছে।");
+      alert("Manager মোডে ফেরত যাওয়া হয়েছে।");
     }
-    applyRoleStyles();
-    updateAll();
-  }
-
-  function applyRoleStyles() {
-    let adminElements = document.querySelectorAll('.admin-only');
-    adminElements.forEach(el => {
-      el.style.display = isAdmin ? 'table-cell' : 'none';
-    });
   }
 
   function updateLiveClock() {
@@ -302,9 +299,18 @@
 
   function getDateTime() {
     let d = new Date();
+    let rawDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     let dateStr = d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
     let timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return dateStr + '<br><small style="color:#6c757d;">' + timeStr + '</small>';
+    return {
+      display: dateStr + '<br><small style="color:#6c757d;">' + timeStr + '</small>',
+      rawDate: rawDate
+    };
+  }
+
+  function clearDateFilter() {
+    document.getElementById('stockFilterDate').value = '';
+    updateAll();
   }
 
   function showTab(id, btn) {
@@ -320,8 +326,9 @@
     let qty = parseFloat(document.getElementById('pQty').value);
     let unit = document.getElementById('pUnit').value;
     if (!item || !qty) return alert('পণ্যের নাম এবং পরিমাণ দিন');
+    let dt = getDateTime();
     let list = getStorage('prodList');
-    list.push({ item, qty, unit, date: getDateTime() });
+    list.push({ item, qty, unit, date: dt.display, rawDate: dt.rawDate });
     setStorage('prodList', list);
     document.getElementById('pItem').value = '';
     document.getElementById('pQty').value = '';
@@ -337,8 +344,9 @@
     let amount = parseFloat(document.getElementById('dAmount').value) || 0;
     if (!name || !item || !qty) return alert('কাস্টমারের নাম, পণ্যের নাম এবং পরিমাণ দিন');
     
+    let dt = getDateTime();
     let list = getStorage('deliListDetails');
-    list.push({ name, phone, item, qty, unit, amount, date: getDateTime() });
+    list.push({ name, phone, item, qty, unit, amount, date: dt.display, rawDate: dt.rawDate });
     setStorage('deliListDetails', list);
     
     document.getElementById('custName').value = '';
@@ -354,8 +362,9 @@
     let qty = parseFloat(document.getElementById('rmInQty').value);
     let unit = document.getElementById('rmInUnit').value;
     if (!item || !qty) return alert('আইটেম এবং পরিমাণ দিন');
+    let dt = getDateTime();
     let list = getStorage('rmInList');
-    list.push({ item, qty, unit, date: getDateTime() });
+    list.push({ item, qty, unit, date: dt.display, rawDate: dt.rawDate });
     setStorage('rmInList', list);
     document.getElementById('rmInItem').value = '';
     document.getElementById('rmInQty').value = '';
@@ -367,8 +376,9 @@
     let qty = parseFloat(document.getElementById('rmOutQty').value);
     let unit = document.getElementById('rmOutUnit').value;
     if (!item || !qty) return alert('আইটেম এবং পরিমাণ দিন');
+    let dt = getDateTime();
     let list = getStorage('rmOutList');
-    list.push({ item, qty, unit, date: getDateTime() });
+    list.push({ item, qty, unit, date: dt.display, rawDate: dt.rawDate });
     setStorage('rmOutList', list);
     document.getElementById('rmOutItem').value = '';
     document.getElementById('rmOutQty').value = '';
@@ -376,11 +386,12 @@
   }
 
   function delItem(key, i) {
-    if (!isAdmin) return alert('ডাটা ডিলিট করার অধিকার শুধু Admin এর আছে!');
-    let list = getStorage(key);
-    list.splice(i, 1);
-    setStorage(key, list);
-    updateAll();
+    if (confirm("আপনি কি নিশ্চিত যে এটি ডিলিট করতে চান?")) {
+      let list = getStorage(key);
+      list.splice(i, 1);
+      setStorage(key, list);
+      updateAll();
+    }
   }
 
   function sendWA(i) {
@@ -430,7 +441,7 @@
         <td>${item.date}</td>
         <td>${item.item || 'সাধারণ'}</td>
         <td>${item.qty} ${item.unit || 'পিস'}</td>
-        ${isAdmin ? `<td><button class="btn-action btn-del" onclick="delItem('prodList', ${i})">Delete</button></td>` : ''}
+        <td><button class="btn-action btn-del" onclick="delItem('prodList', ${i})">Delete</button></td>
       </tr>`;
     });
     document.getElementById('pTable').innerHTML = pHtml;
@@ -447,34 +458,40 @@
         <td>
           <button class="btn-action btn-wa" onclick="sendWA(${i})">WhatsApp</button>
           <button class="btn-action btn-sms" onclick="sendSMS(${i})">SMS</button>
-          ${isAdmin ? `<button class="btn-action btn-del" onclick="delItem('deliListDetails', ${i})">Delete</button>` : ''}
+          <button class="btn-action btn-del" onclick="delItem('deliListDetails', ${i})">Delete</button>
         </td>
       </tr>`;
     });
     document.getElementById('dTable').innerHTML = dHtml;
 
-    // Product Wise Stock Calculation
+    // Product Wise Stock Calculation (With Date Filter)
+    let selectedDate = document.getElementById('stockFilterDate').value;
     let pStockMap = {};
+
     prods.forEach(entry => {
-      let key = (entry.item || 'সাধারণ').trim().toLowerCase();
-      if(!pStockMap[key]) {
-        pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
+      if (!selectedDate || entry.rawDate === selectedDate) {
+        let key = (entry.item || 'সাধারণ').trim().toLowerCase();
+        if(!pStockMap[key]) {
+          pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
+        }
+        pStockMap[key].pQty += entry.qty;
       }
-      pStockMap[key].pQty += entry.qty;
     });
 
     delis.forEach(entry => {
-      let key = (entry.item || 'সাধারণ').trim().toLowerCase();
-      if(!pStockMap[key]) {
-        pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
+      if (!selectedDate || entry.rawDate === selectedDate) {
+        let key = (entry.item || 'সাধারণ').trim().toLowerCase();
+        if(!pStockMap[key]) {
+          pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
+        }
+        pStockMap[key].dQty += entry.qty;
       }
-      pStockMap[key].dQty += entry.qty;
     });
 
     let pSHtml = '';
     let pKeys = Object.keys(pStockMap);
     if(pKeys.length === 0) {
-      pSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">কোনো প্রোডাক্ট ডাটা নেই</td></tr>`;
+      pSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো প্রোডাক্ট ডাটা নেই'}</td></tr>`;
     } else {
       pKeys.forEach(k => {
         let itemData = pStockMap[k];
@@ -498,7 +515,7 @@
         <td>${item.date}</td>
         <td>${item.item}</td>
         <td>${item.qty} ${item.unit || 'কেজি'}</td>
-        ${isAdmin ? `<td><button class="btn-action btn-del" onclick="delItem('rmInList', ${i})">Delete</button></td>` : ''}
+        <td><button class="btn-action btn-del" onclick="delItem('rmInList', ${i})">Delete</button></td>
       </tr>`;
     });
     document.getElementById('rmInTable').innerHTML = rmIHtml;
@@ -510,7 +527,7 @@
         <td>${item.date}</td>
         <td>${item.item}</td>
         <td>${item.qty} ${item.unit || 'কেজি'}</td>
-        ${isAdmin ? `<td><button class="btn-action btn-del" onclick="delItem('rmOutList', ${i})">Delete</button></td>` : ''}
+        <td><button class="btn-action btn-del" onclick="delItem('rmOutList', ${i})">Delete</button></td>
       </tr>`;
     });
     document.getElementById('rmOutTable').innerHTML = rmOHtml;
@@ -552,9 +569,9 @@
       });
     }
     document.getElementById('rmStockTable').innerHTML = rmSHtml;
-    applyRoleStyles();
   }
   updateAll();
 </script>
 </body>
 </html>
+              
