@@ -176,7 +176,7 @@
     </div>
   </div>
 
-  <!-- Product Stock Tab (তারিখ ফিল্টারসহ) -->
+  <!-- Product Stock Tab -->
   <div id="prodStock" class="section">
     <div class="form-group" style="margin-bottom: 10px;">
       <h3>পণ্য ভিত্তিক কারেন্ট স্টক (Finished Goods Stock)</h3>
@@ -245,7 +245,7 @@
     </table>
   </div>
 
-  <!-- Raw Material Current Stock Tab (তারিখ ফিল্টারসহ) -->
+  <!-- Raw Material Current Stock Tab -->
   <div id="rmStock" class="section">
     <div class="form-group" style="margin-bottom: 10px;">
       <h3>র মেটেরিয়াল কারেন্ট স্টক (Raw Material Stock)</h3>
@@ -398,7 +398,12 @@
     updateAll();
   }
 
+  // ম্যানেজার নিরাপত্তা নিশ্চিত করার আপডেট ফাংশন
   function delItem(key, i) {
+    if (!isAdmin) {
+      alert("সতর্কতা: ম্যানেজার মোডে কোনো তথ্য ডিলিট করার অনুমতি নেই! শুধুমাত্র Admin PIN দিয়ে ঢুকলে ডিলিট করা যাবে।");
+      return;
+    }
     if (confirm("আপনি কি নিশ্চিত যে এটি ডিলিট করতে চান?")) {
       let list = getStorage(key);
       list.splice(i, 1);
