@@ -9,7 +9,6 @@
   body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f6f9; }
   .top { background-color: #0d6efd; color: white; padding: 15px; text-align: center; display: flex; align-items: center; justify-content: center; }
   
-  /* ইমোজির মাঝে লেখা বসানোর স্টাইল */
   .logo-badge {
     position: relative;
     display: inline-flex;
@@ -29,8 +28,20 @@
     letter-spacing: 0.5px;
   }
 
-  .nav { display: flex; overflow-x: auto; background-color: #ffffff; padding: 10px; gap: 8px; border-bottom: 1px solid #ddd; }
-  .nav button { flex: 1; min-width: 90px; padding: 10px; border: none; background: #e9ecef; border-radius: 5px; font-weight: bold; cursor: pointer; }
+  .clock-banner {
+    background: #ffffff;
+    margin: 10px 15px 5px 15px;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-left: 4px solid #0d6efd;
+  }
+  .clock-time { font-size: 20px; font-weight: bold; color: #0d6efd; }
+  .clock-date { font-size: 12px; color: #6c757d; margin-top: 2px; }
+
+  .nav { display: flex; overflow-x: auto; background-color: #ffffff; padding: 10px; gap: 8px; border-bottom: 1px solid #ddd; white-space: nowrap; }
+  .nav button { flex: 0 0 auto; padding: 10px 14px; border: none; background: #e9ecef; border-radius: 5px; font-weight: bold; cursor: pointer; }
   .nav button.active { background: #0d6efd; color: white; }
   .container { padding: 15px; }
   .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
@@ -38,13 +49,18 @@
   .stat-title { font-size: 13px; color: #6c757d; margin-bottom: 5px; }
   .stat-val { font-size: 18px; font-weight: bold; color: #212529; }
   .form-group { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-  input, button.btn-submit { width: 100%; padding: 10px; margin-top: 8px; border: 1px solid #ccc; border-radius: 5px; }
+  input, select, button.btn-submit { width: 100%; padding: 10px; margin-top: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
+  .qty-group { display: flex; gap: 8px; }
+  .qty-group input { flex: 2; }
+  .qty-group select { flex: 1; }
   button.btn-submit { background: #198754; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 12px; }
   table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; font-size: 12px; margin-top: 10px; }
   th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
   th { background: #f8f9fa; }
-  .btn-action { padding: 4px 6px; border: none; border-radius: 3px; cursor: pointer; font-size: 10px; margin: 1px; }
+  .btn-action { padding: 5px 7px; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; margin: 1px; }
   .btn-del { background: #dc3545; color: white; }
+  .btn-wa { background: #25D366; color: white; }
+  .btn-sms { background: #0d6efd; color: white; }
   .section { display: none; }
   .section.active { display: block; }
 </style>
@@ -52,29 +68,41 @@
 <body>
 
 <div class="top">
-  <!-- ইমোজির মাঝখানে Sun লেখা -->
   <div class="logo-badge">
     <span class="emoji">☀️</span>
     <span class="text">SUN</span>
   </div>
 </div>
 
+<div class="clock-banner">
+  <div class="clock-time" id="liveClock">00:00:00 AM</div>
+  <div class="clock-date" id="liveDate">Loading date...</div>
+</div>
+
 <div class="nav">
   <button class="active" onclick="showTab('dash', this)">Dashboard</button>
   <button onclick="showTab('prod', this)">Production</button>
   <button onclick="showTab('deli', this)">Delivery</button>
+  <button onclick="showTab('rmIn', this)">Mat. In</button>
+  <button onclick="showTab('rmOut', this)">Mat. Out</button>
 </div>
 
 <div class="container">
+  <!-- Dashboard Tab -->
   <div id="dash" class="section active">
     <div class="card-grid">
       <div class="card"><div class="stat-title">💰 Total Sales</div><div class="stat-val">৳<span id="salesVal">0</span></div></div>
+      <div class="card"><div class="stat-title">💵 Total Collected</div><div class="stat-val">৳<span id="collVal">0</span></div></div>
+      <div class="card"><div class="stat-title">📌 Total Due</div><div class="stat-val">৳<span id="dueVal">0</span></div></div>
       <div class="card"><div class="stat-title">📦 Total Prod</div><div class="stat-val"><span id="prodVal">0</span></div></div>
       <div class="card"><div class="stat-title">🚚 Total Deli</div><div class="stat-val"><span id="deliVal">0</span></div></div>
       <div class="card"><div class="stat-title">🏭 Stock</div><div class="stat-val"><span id="stockVal">0</span></div></div>
+      <div class="card"><div class="stat-title">📥 Raw Mat In</div><div class="stat-val"><span id="rmInVal">0</span></div></div>
+      <div class="card"><div class="stat-title">📤 Raw Mat Out</div><div class="stat-val"><span id="rmOutVal">0</span></div></div>
     </div>
   </div>
 
+  <!-- Production Tab -->
   <div id="prod" class="section">
     <div class="form-group">
       <h3>নতুন উৎপাদন যোগ করুন</h3>
@@ -82,32 +110,96 @@
       <button class="btn-submit" onclick="saveProd()">সংরক্ষণ করুন</button>
     </div>
     <table>
-      <thead><tr><th>তারিখ</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
+      <thead><tr><th>তারিখ ও সময়</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
       <tbody id="pTable"></tbody>
     </table>
   </div>
 
+  <!-- Delivery Tab -->
   <div id="deli" class="section">
     <div class="form-group">
       <h3>নতুন ডেলিভারি যোগ করুন</h3>
       <input type="text" id="custName" placeholder="কাস্টমারের নাম">
-      <input type="text" id="custPhone" placeholder="মোবাইল নম্বর">
+      <input type="text" id="custPhone" placeholder="মোবাইল নম্বর (যেমন: 017xxxxxxxx)">
       <input type="number" id="dQty" placeholder="পরিমাণ">
       <input type="number" id="dAmount" placeholder="মোট টাকা">
       <button class="btn-submit" onclick="saveDeli()">সংরক্ষণ করুন</button>
     </div>
     <div style="overflow-x:auto;">
       <table>
-        <thead><tr><th>তারিখ</th><th>কাস্টমার</th><th>পরিমাণ</th><th>মূল্য</th><th>অ্যাকশন</th></tr></thead>
+        <thead><tr><th>তারিখ ও সময়</th><th>কাস্টমার</th><th>পরিমাণ</th><th>মূল্য</th><th>অ্যাকশন</th></tr></thead>
         <tbody id="dTable"></tbody>
       </table>
     </div>
   </div>
+
+  <!-- Raw Material In Tab (ইউনিট সেকশনসহ) -->
+  <div id="rmIn" class="section">
+    <div class="form-group">
+      <h3>র মেটেরিয়াল ইন (আমদানি)</h3>
+      <input type="text" id="rmInItem" placeholder="মালের নাম (যেমন: সুতা/প্লাস্টিক)">
+      <div class="qty-group">
+        <input type="number" id="rmInQty" placeholder="পরিমাণ">
+        <select id="rmInUnit">
+          <option value="কেজি">কেজি</option>
+          <option value="পিস">পিস</option>
+          <option value="গজ">গজ</option>
+          <option value="মিটার">মিটার</option>
+          <option value="লিটার">লিটার</option>
+        </select>
+      </div>
+      <button class="btn-submit" onclick="saveRMIn()">সংরক্ষণ করুন</button>
+    </div>
+    <table>
+      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
+      <tbody id="rmInTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Raw Material Out Tab (ইউনিট সেকশনসহ) -->
+  <div id="rmOut" class="section">
+    <div class="form-group">
+      <h3>র মেটেরিয়াল আউট (ব্যবহার)</h3>
+      <input type="text" id="rmOutItem" placeholder="মালের নাম (যেমন: সুতা/প্লাস্টিক)">
+      <div class="qty-group">
+        <input type="number" id="rmOutQty" placeholder="পরিমাণ">
+        <select id="rmOutUnit">
+          <option value="কেজি">কেজি</option>
+          <option value="পিস">পিস</option>
+          <option value="গজ">গজ</option>
+          <option value="মিটার">মিটার</option>
+          <option value="লিটার">লিটার</option>
+        </select>
+      </div>
+      <button class="btn-submit" onclick="saveRMOut()">সংরক্ষণ করুন</button>
+    </div>
+    <table>
+      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
+      <tbody id="rmOutTable"></tbody>
+    </table>
+  </div>
+
 </div>
 
 <script>
+  function updateLiveClock() {
+    let d = new Date();
+    document.getElementById('liveClock').innerText = d.toLocaleTimeString();
+    let options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById('liveDate').innerText = d.toLocaleDateString('bn-BD', options);
+  }
+  setInterval(updateLiveClock, 1000);
+  updateLiveClock();
+
   function getStorage(key) { return JSON.parse(localStorage.getItem(key)) || []; }
   function setStorage(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+  function getDateTime() {
+    let d = new Date();
+    let dateStr = d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
+    let timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return dateStr + '<br><small style="color:#6c757d;">' + timeStr + '</small>';
+  }
 
   function showTab(id, btn) {
     document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -121,7 +213,7 @@
     let qty = parseFloat(document.getElementById('pQty').value);
     if (!qty) return;
     let list = getStorage('prodList');
-    list.push({ qty, date: new Date().toLocaleDateString() });
+    list.push({ qty, date: getDateTime() });
     setStorage('prodList', list);
     document.getElementById('pQty').value = '';
     updateAll();
@@ -131,15 +223,43 @@
     let name = document.getElementById('custName').value;
     let phone = document.getElementById('custPhone').value;
     let qty = parseFloat(document.getElementById('dQty').value);
-    let amount = parseFloat(document.getElementById('dAmount').value);
-    if (!name || !qty) return;
+    let amount = parseFloat(document.getElementById('dAmount').value) || 0;
+    if (!name || !qty) return alert('কাস্টমারের নাম এবং পরিমাণ দিন');
+    
     let list = getStorage('deliListDetails');
-    list.push({ name, phone, qty, amount, date: new Date().toLocaleDateString() });
+    list.push({ name, phone, qty, amount, date: getDateTime() });
     setStorage('deliListDetails', list);
+    
     document.getElementById('custName').value = '';
     document.getElementById('custPhone').value = '';
     document.getElementById('dQty').value = '';
     document.getElementById('dAmount').value = '';
+    updateAll();
+  }
+
+  function saveRMIn() {
+    let item = document.getElementById('rmInItem').value;
+    let qty = parseFloat(document.getElementById('rmInQty').value);
+    let unit = document.getElementById('rmInUnit').value;
+    if (!item || !qty) return alert('আইটেম এবং পরিমাণ দিন');
+    let list = getStorage('rmInList');
+    list.push({ item, qty, unit, date: getDateTime() });
+    setStorage('rmInList', list);
+    document.getElementById('rmInItem').value = '';
+    document.getElementById('rmInQty').value = '';
+    updateAll();
+  }
+
+  function saveRMOut() {
+    let item = document.getElementById('rmOutItem').value;
+    let qty = parseFloat(document.getElementById('rmOutQty').value);
+    let unit = document.getElementById('rmOutUnit').value;
+    if (!item || !qty) return alert('আইটেম এবং পরিমাণ দিন');
+    let list = getStorage('rmOutList');
+    list.push({ item, qty, unit, date: getDateTime() });
+    setStorage('rmOutList', list);
+    document.getElementById('rmOutItem').value = '';
+    document.getElementById('rmOutQty').value = '';
     updateAll();
   }
 
@@ -150,21 +270,75 @@
     updateAll();
   }
 
+  function sendWA(i) {
+    let list = getStorage('deliListDetails');
+    let item = list[i];
+    if (!item.phone) return alert('মোবাইল নম্বর দেওয়া নেই!');
+    let phone = item.phone.replace(/[^0-9]/g, '');
+    if(phone.startsWith('0')) phone = '88' + phone;
+    let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+    let msg = `প্রিয় ${item.name},\nSUN থেকে আপনার চালানের তথ্য:\nসময়: ${cleanDate}\nপরিমাণ: ${item.qty} টি\nমূল্য: ৳${item.amount}\nধন্যবাদ!`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  function sendSMS(i) {
+    let list = getStorage('deliListDetails');
+    let item = list[i];
+    if (!item.phone) return alert('মোবাইল নম্বর দেওয়া নেই!');
+    let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+    let msg = `SUN: ${item.name}, Delivery Qty: ${item.qty}, Total: ${item.amount} Tk. Date: ${cleanDate}. Dhanyabad!`;
+    window.open(`sms:${item.phone}?body=${encodeURIComponent(msg)}`, '_self');
+  }
+
   function updateAll() {
     let prods = getStorage('prodList');
     let delis = getStorage('deliListDetails');
-    document.getElementById('prodVal').innerText = prods.reduce((a, b) => a + b.qty, 0);
-    document.getElementById('deliVal').innerText = delis.reduce((a, b) => a + b.qty, 0);
-    document.getElementById('salesVal').innerText = delis.reduce((a, b) => a + (b.amount || 0), 0);
-    document.getElementById('stockVal').innerText = prods.reduce((a, b) => a + b.qty, 0) - delis.reduce((a, b) => a + b.qty, 0);
+    let rmIns = getStorage('rmInList');
+    let rmOuts = getStorage('rmOutList');
+    
+    let totalP = prods.reduce((a, b) => a + b.qty, 0);
+    let totalD = delis.reduce((a, b) => a + b.qty, 0);
+    let totalSales = delis.reduce((a, b) => a + (b.amount || 0), 0);
+    let totalRMIn = rmIns.reduce((a, b) => a + b.qty, 0);
+    let totalRMOut = rmOuts.reduce((a, b) => a + b.qty, 0);
 
+    document.getElementById('prodVal').innerText = totalP;
+    document.getElementById('deliVal').innerText = totalD;
+    document.getElementById('salesVal').innerText = totalSales;
+    document.getElementById('dueVal').innerText = totalSales;
+    document.getElementById('stockVal').innerText = totalP - totalD;
+    document.getElementById('rmInVal').innerText = totalRMIn;
+    document.getElementById('rmOutVal').innerText = totalRMOut;
+
+    // Production Table
     let pHtml = '';
     prods.forEach((item, i) => pHtml += `<tr><td>${item.date}</td><td>${item.qty}</td><td><button class="btn-action btn-del" onclick="delItem('prodList', ${i})">Delete</button></td></tr>`);
     document.getElementById('pTable').innerHTML = pHtml;
 
+    // Delivery Table
     let dHtml = '';
-    delis.forEach((item, i) => dHtml += `<tr><td>${item.date}</td><td>${item.name}</td><td>${item.qty}</td><td>৳${item.amount || 0}</td><td><button class="btn-action btn-del" onclick="delItem('deliListDetails', ${i})">Delete</button></td></tr>`);
+    delis.forEach((item, i) => dHtml += `<tr>
+      <td>${item.date}</td>
+      <td>${item.name}<br><small>${item.phone || ''}</small></td>
+      <td>${item.qty}</td>
+      <td>৳${item.amount || 0}</td>
+      <td>
+        <button class="btn-action btn-wa" onclick="sendWA(${i})">WA</button>
+        <button class="btn-action btn-sms" onclick="sendSMS(${i})">SMS</button>
+        <button class="btn-action btn-del" onclick="delItem('deliListDetails', ${i})">Delete</button>
+      </td>
+    </tr>`);
     document.getElementById('dTable').innerHTML = dHtml;
+
+    // RM In Table
+    let rmIHtml = '';
+    rmIns.forEach((item, i) => rmIHtml += `<tr><td>${item.date}</td><td>${item.item}</td><td>${item.qty} ${item.unit || 'কেজি'}</td><td><button class="btn-action btn-del" onclick="delItem('rmInList', ${i})">Delete</button></td></tr>`);
+    document.getElementById('rmInTable').innerHTML = rmIHtml;
+
+    // RM Out Table
+    let rmOHtml = '';
+    rmOuts.forEach((item, i) => rmOHtml += `<tr><td>${item.date}</td><td>${item.item}</td><td>${item.qty} ${item.unit || 'কেজি'}</td><td><button class="btn-action btn-del" onclick="delItem('rmOutList', ${i})">Delete</button></td></tr>`);
+    document.getElementById('rmOutTable').innerHTML = rmOHtml;
   }
   updateAll();
 </script>
