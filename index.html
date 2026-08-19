@@ -1,4 +1,4 @@
-<!doctype html>
+ <!doctype html>
 <html lang="bn">
 <head>
 <meta charset="utf-8">
@@ -63,6 +63,9 @@
   .btn-sms { background: #0d6efd; color: white; }
   .section { display: none; }
   .section.active { display: block; }
+  .stock-badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+  .stock-positive { background: #d1e7dd; color: #0f5132; }
+  .stock-negative { background: #f8d7da; color: #842029; }
 </style>
 </head>
 <body>
@@ -83,8 +86,10 @@
   <button class="active" onclick="showTab('dash', this)">Dashboard</button>
   <button onclick="showTab('prod', this)">Production</button>
   <button onclick="showTab('deli', this)">Delivery</button>
+  <button onclick="showTab('prodStock', this)">Prod. Stock</button>
   <button onclick="showTab('rmIn', this)">Mat. In</button>
   <button onclick="showTab('rmOut', this)">Mat. Out</button>
+  <button onclick="showTab('rmStock', this)">Mat. Stock</button>
 </div>
 
 <div class="container">
@@ -96,56 +101,94 @@
       <div class="card"><div class="stat-title">📌 Total Due</div><div class="stat-val">৳<span id="dueVal">0</span></div></div>
       <div class="card"><div class="stat-title">📦 Total Prod</div><div class="stat-val"><span id="prodVal">0</span></div></div>
       <div class="card"><div class="stat-title">🚚 Total Deli</div><div class="stat-val"><span id="deliVal">0</span></div></div>
-      <div class="card"><div class="stat-title">🏭 Stock</div><div class="stat-val"><span id="stockVal">0</span></div></div>
+      <div class="card"><div class="stat-title">🏭 Total Stock</div><div class="stat-val"><span id="stockVal">0</span></div></div>
       <div class="card"><div class="stat-title">📥 Raw Mat In</div><div class="stat-val"><span id="rmInVal">0</span></div></div>
       <div class="card"><div class="stat-title">📤 Raw Mat Out</div><div class="stat-val"><span id="rmOutVal">0</span></div></div>
     </div>
   </div>
 
-  <!-- Production Tab -->
+  <!-- Production Tab (আইটেম যুক্ত করা হয়েছে) -->
   <div id="prod" class="section">
     <div class="form-group">
       <h3>নতুন উৎপাদন যোগ করুন</h3>
-      <input type="number" id="pQty" placeholder="পরিমাণ">
+      <input type="text" id="pItem" placeholder="পণ্যের নাম (যেমন: টি-শার্ট / সাবান)">
+      <div class="qty-group">
+        <input type="number" id="pQty" placeholder="পরিমাণ">
+        <select id="pUnit">
+          <option value="পিস">পিস</option>
+          <option value="কেজি">কেজি</option>
+          <option value="কার্টুন">কার্টুন</option>
+          <option value="বস্তা">বস্তা</option>
+          <option value="ডজন">ডজন</option>
+        </select>
+      </div>
       <button class="btn-submit" onclick="saveProd()">সংরক্ষণ করুন</button>
     </div>
     <table>
-      <thead><tr><th>তারিখ ও সময়</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
+      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
       <tbody id="pTable"></tbody>
     </table>
   </div>
 
-  <!-- Delivery Tab -->
+  <!-- Delivery Tab (আইটেম যুক্ত করা হয়েছে) -->
   <div id="deli" class="section">
     <div class="form-group">
       <h3>নতুন ডেলিভারি যোগ করুন</h3>
       <input type="text" id="custName" placeholder="কাস্টমারের নাম">
       <input type="text" id="custPhone" placeholder="মোবাইল নম্বর (যেমন: 017xxxxxxxx)">
-      <input type="number" id="dQty" placeholder="পরিমাণ">
+      <input type="text" id="dItem" placeholder="পণ্যের নাম (যেমন: টি-শার্ট / সাবান)">
+      <div class="qty-group">
+        <input type="number" id="dQty" placeholder="পরিমাণ">
+        <select id="dUnit">
+          <option value="পিস">পিস</option>
+          <option value="কেজি">কেজি</option>
+          <option value="কার্টুন">কার্টুন</option>
+          <option value="বস্তা">বস্তা</option>
+          <option value="ডজন">ডজন</option>
+        </select>
+      </div>
       <input type="number" id="dAmount" placeholder="মোট টাকা">
       <button class="btn-submit" onclick="saveDeli()">সংরক্ষণ করুন</button>
     </div>
     <div style="overflow-x:auto;">
       <table>
-        <thead><tr><th>তারিখ ও সময়</th><th>কাস্টমার</th><th>পরিমাণ</th><th>মূল্য</th><th>অ্যাকশন</th></tr></thead>
+        <thead><tr><th>তারিখ ও সময়</th><th>কাস্টমার</th><th>আইটেম</th><th>পরিমাণ</th><th>মূল্য</th><th>অ্যাকশন</th></tr></thead>
         <tbody id="dTable"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Raw Material In Tab (ইউনিট সেকশনসহ) -->
+  <!-- Product Stock Tab (আইটেমওয়াইজ ফিনিশড গুডস স্টক) -->
+  <div id="prodStock" class="section">
+    <div class="form-group" style="margin-bottom: 10px;">
+      <h3>পণ্য ভিত্তিক কারেন্ট স্টক (Finished Goods Stock)</h3>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>পণ্যের নাম</th>
+          <th>উৎপাদন</th>
+          <th>ডেলিভারি</th>
+          <th>স্টক ব্যালেন্স</th>
+        </tr>
+      </thead>
+      <tbody id="prodStockTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Raw Material In Tab -->
   <div id="rmIn" class="section">
     <div class="form-group">
       <h3>র মেটেরিয়াল ইন (আমদানি)</h3>
-      <input type="text" id="rmInItem" placeholder="মালের নাম (যেমন: সুতা/প্লাস্টিক)">
+      <input type="text" id="rmInItem" placeholder="মালের নাম (যেমন: সোডা/সুতা/প্লাস্টিক)">
       <div class="qty-group">
         <input type="number" id="rmInQty" placeholder="পরিমাণ">
         <select id="rmInUnit">
           <option value="কেজি">কেজি</option>
           <option value="পিস">পিস</option>
-          <option value="গজ">গজ</option>
-          <option value="মিটার">মিটার</option>
-          <option value="লিটার">লিটার</option>
+          <option value="কার্টুন">কার্টুন</option>
+          <option value="বস্তা">বস্তা</option>
+          <option value="ডজন">ডজন</option>
         </select>
       </div>
       <button class="btn-submit" onclick="saveRMIn()">সংরক্ষণ করুন</button>
@@ -156,19 +199,19 @@
     </table>
   </div>
 
-  <!-- Raw Material Out Tab (ইউনিট সেকশনসহ) -->
+  <!-- Raw Material Out Tab -->
   <div id="rmOut" class="section">
     <div class="form-group">
       <h3>র মেটেরিয়াল আউট (ব্যবহার)</h3>
-      <input type="text" id="rmOutItem" placeholder="মালের নাম (যেমন: সুতা/প্লাস্টিক)">
+      <input type="text" id="rmOutItem" placeholder="মালের নাম (যেমন: সোডা/সুতা/প্লাস্টিক)">
       <div class="qty-group">
         <input type="number" id="rmOutQty" placeholder="পরিমাণ">
         <select id="rmOutUnit">
           <option value="কেজি">কেজি</option>
           <option value="পিস">পিস</option>
-          <option value="গজ">গজ</option>
-          <option value="মিটার">মিটার</option>
-          <option value="লিটার">লিটার</option>
+          <option value="কার্টুন">কার্টুন</option>
+          <option value="বস্তা">বস্তা</option>
+          <option value="ডজন">ডজন</option>
         </select>
       </div>
       <button class="btn-submit" onclick="saveRMOut()">সংরক্ষণ করুন</button>
@@ -176,6 +219,24 @@
     <table>
       <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
       <tbody id="rmOutTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Raw Material Current Stock Tab -->
+  <div id="rmStock" class="section">
+    <div class="form-group" style="margin-bottom: 10px;">
+      <h3>র মেটেরিয়াল কারেন্ট স্টক (Raw Material Stock)</h3>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>আইটেমের নাম</th>
+          <th>মোট ইন</th>
+          <th>মোট আউট</th>
+          <th>কারেন্ট ব্যালেন্স</th>
+        </tr>
+      </thead>
+      <tbody id="rmStockTable"></tbody>
     </table>
   </div>
 
@@ -210,11 +271,14 @@
   }
 
   function saveProd() {
+    let item = document.getElementById('pItem').value.trim();
     let qty = parseFloat(document.getElementById('pQty').value);
-    if (!qty) return;
+    let unit = document.getElementById('pUnit').value;
+    if (!item || !qty) return alert('পণ্যের নাম এবং পরিমাণ দিন');
     let list = getStorage('prodList');
-    list.push({ qty, date: getDateTime() });
+    list.push({ item, qty, unit, date: getDateTime() });
     setStorage('prodList', list);
+    document.getElementById('pItem').value = '';
     document.getElementById('pQty').value = '';
     updateAll();
   }
@@ -222,23 +286,26 @@
   function saveDeli() {
     let name = document.getElementById('custName').value;
     let phone = document.getElementById('custPhone').value;
+    let item = document.getElementById('dItem').value.trim();
     let qty = parseFloat(document.getElementById('dQty').value);
+    let unit = document.getElementById('dUnit').value;
     let amount = parseFloat(document.getElementById('dAmount').value) || 0;
-    if (!name || !qty) return alert('কাস্টমারের নাম এবং পরিমাণ দিন');
+    if (!name || !item || !qty) return alert('কাস্টমারের নাম, পণ্যের নাম এবং পরিমাণ দিন');
     
     let list = getStorage('deliListDetails');
-    list.push({ name, phone, qty, amount, date: getDateTime() });
+    list.push({ name, phone, item, qty, unit, amount, date: getDateTime() });
     setStorage('deliListDetails', list);
     
     document.getElementById('custName').value = '';
     document.getElementById('custPhone').value = '';
+    document.getElementById('dItem').value = '';
     document.getElementById('dQty').value = '';
     document.getElementById('dAmount').value = '';
     updateAll();
   }
 
   function saveRMIn() {
-    let item = document.getElementById('rmInItem').value;
+    let item = document.getElementById('rmInItem').value.trim();
     let qty = parseFloat(document.getElementById('rmInQty').value);
     let unit = document.getElementById('rmInUnit').value;
     if (!item || !qty) return alert('আইটেম এবং পরিমাণ দিন');
@@ -251,7 +318,7 @@
   }
 
   function saveRMOut() {
-    let item = document.getElementById('rmOutItem').value;
+    let item = document.getElementById('rmOutItem').value.trim();
     let qty = parseFloat(document.getElementById('rmOutQty').value);
     let unit = document.getElementById('rmOutUnit').value;
     if (!item || !qty) return alert('আইটেম এবং পরিমাণ দিন');
@@ -277,7 +344,7 @@
     let phone = item.phone.replace(/[^0-9]/g, '');
     if(phone.startsWith('0')) phone = '88' + phone;
     let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-    let msg = `প্রিয় ${item.name},\nSUN থেকে আপনার চালানের তথ্য:\nসময়: ${cleanDate}\nপরিমাণ: ${item.qty} টি\nমূল্য: ৳${item.amount}\nধন্যবাদ!`;
+    let msg = `প্রিয় ${item.name},\nSun product থেকে আপনার চালানের তথ্য:\nসময়: ${cleanDate}\nপণ্য: ${item.item}\nপরিমাণ: ${item.qty} ${item.unit || ''}\nমূল্য: ৳${item.amount}\nধন্যবাদ!`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
@@ -286,7 +353,7 @@
     let item = list[i];
     if (!item.phone) return alert('মোবাইল নম্বর দেওয়া নেই!');
     let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-    let msg = `SUN: ${item.name}, Delivery Qty: ${item.qty}, Total: ${item.amount} Tk. Date: ${cleanDate}. Dhanyabad!`;
+    let msg = `Sun product: ${item.name}, Item: ${item.item}, Delivery Qty: ${item.qty} ${item.unit || ''}, Total: ${item.amount} Tk. Date: ${cleanDate}. Dhanyabad!`;
     window.open(`sms:${item.phone}?body=${encodeURIComponent(msg)}`, '_self');
   }
 
@@ -312,7 +379,7 @@
 
     // Production Table
     let pHtml = '';
-    prods.forEach((item, i) => pHtml += `<tr><td>${item.date}</td><td>${item.qty}</td><td><button class="btn-action btn-del" onclick="delItem('prodList', ${i})">Delete</button></td></tr>`);
+    prods.forEach((item, i) => pHtml += `<tr><td>${item.date}</td><td>${item.item || 'সাধারণ'}</td><td>${item.qty} ${item.unit || 'পিস'}</td><td><button class="btn-action btn-del" onclick="delItem('prodList', ${i})">Delete</button></td></tr>`);
     document.getElementById('pTable').innerHTML = pHtml;
 
     // Delivery Table
@@ -320,7 +387,8 @@
     delis.forEach((item, i) => dHtml += `<tr>
       <td>${item.date}</td>
       <td>${item.name}<br><small>${item.phone || ''}</small></td>
-      <td>${item.qty}</td>
+      <td>${item.item || 'সাধারণ'}</td>
+      <td>${item.qty} ${item.unit || 'পিস'}</td>
       <td>৳${item.amount || 0}</td>
       <td>
         <button class="btn-action btn-wa" onclick="sendWA(${i})">WA</button>
@@ -329,6 +397,44 @@
       </td>
     </tr>`);
     document.getElementById('dTable').innerHTML = dHtml;
+
+    // Product Wise Stock Calculation
+    let pStockMap = {};
+    prods.forEach(entry => {
+      let key = (entry.item || 'সাধারণ').trim().toLowerCase();
+      if(!pStockMap[key]) {
+        pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
+      }
+      pStockMap[key].pQty += entry.qty;
+    });
+
+    delis.forEach(entry => {
+      let key = (entry.item || 'সাধারণ').trim().toLowerCase();
+      if(!pStockMap[key]) {
+        pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
+      }
+      pStockMap[key].dQty += entry.qty;
+    });
+
+    let pSHtml = '';
+    let pKeys = Object.keys(pStockMap);
+    if(pKeys.length === 0) {
+      pSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">কোনো প্রোডাক্ট ডাটা নেই</td></tr>`;
+    } else {
+      pKeys.forEach(k => {
+        let itemData = pStockMap[k];
+        let balance = itemData.pQty - itemData.dQty;
+        let badgeClass = balance >= 0 ? 'stock-positive' : 'stock-negative';
+        
+        pSHtml += `<tr>
+          <td><b>${itemData.name}</b></td>
+          <td>${itemData.pQty} ${itemData.unit}</td>
+          <td>${itemData.dQty} ${itemData.unit}</td>
+          <td><span class="stock-badge ${badgeClass}">${balance} ${itemData.unit}</span></td>
+        </tr>`;
+      });
+    }
+    document.getElementById('prodStockTable').innerHTML = pSHtml;
 
     // RM In Table
     let rmIHtml = '';
@@ -339,6 +445,44 @@
     let rmOHtml = '';
     rmOuts.forEach((item, i) => rmOHtml += `<tr><td>${item.date}</td><td>${item.item}</td><td>${item.qty} ${item.unit || 'কেজি'}</td><td><button class="btn-action btn-del" onclick="delItem('rmOutList', ${i})">Delete</button></td></tr>`);
     document.getElementById('rmOutTable').innerHTML = rmOHtml;
+
+    // RM Current Stock calculation per Item
+    let stockMap = {};
+    rmIns.forEach(entry => {
+      let key = entry.item.trim().toLowerCase();
+      if(!stockMap[key]) {
+        stockMap[key] = { name: entry.item, inQty: 0, outQty: 0, unit: entry.unit || 'কেজি' };
+      }
+      stockMap[key].inQty += entry.qty;
+    });
+
+    rmOuts.forEach(entry => {
+      let key = entry.item.trim().toLowerCase();
+      if(!stockMap[key]) {
+        stockMap[key] = { name: entry.item, inQty: 0, outQty: 0, unit: entry.unit || 'কেজি' };
+      }
+      stockMap[key].outQty += entry.qty;
+    });
+
+    let rmSHtml = '';
+    let keys = Object.keys(stockMap);
+    if(keys.length === 0) {
+      rmSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">কোনো র মেটেরিয়াল ডাটা নেই</td></tr>`;
+    } else {
+      keys.forEach(k => {
+        let itemData = stockMap[k];
+        let balance = itemData.inQty - itemData.outQty;
+        let badgeClass = balance >= 0 ? 'stock-positive' : 'stock-negative';
+        
+        rmSHtml += `<tr>
+          <td><b>${itemData.name}</b></td>
+          <td>${itemData.inQty} ${itemData.unit}</td>
+          <td>${itemData.outQty} ${itemData.unit}</td>
+          <td><span class="stock-badge ${badgeClass}">${balance} ${itemData.unit}</span></td>
+        </tr>`;
+      });
+    }
+    document.getElementById('rmStockTable').innerHTML = rmSHtml;
   }
   updateAll();
 </script>
