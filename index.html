@@ -1,4 +1,4 @@
-    <!doctype html>
+<!doctype html>
 <html lang="bn">
 <head>
 <meta charset="utf-8">
@@ -77,8 +77,8 @@
   .stock-badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; }
   .stock-positive { background: #d1e7dd; color: #0f5132; }
   .stock-negative { background: #f8d7da; color: #842029; }
-  .filter-box { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
-  .filter-box input { margin-top: 0; }
+  .filter-box { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .filter-box input { margin-top: 0; width: auto; }
 </style>
 </head>
 <body>
@@ -180,7 +180,7 @@
       <div class="filter-box">
         <label style="font-size:12px; font-weight:bold;">তারিখ বাছাই করুন:</label>
         <input type="date" id="stockFilterDate" onchange="updateAll()">
-        <button style="padding:6px; margin-top:0; font-size:12px;" onclick="clearDateFilter()">সব তারিখ দেখুন</button>
+        <button style="padding:6px; margin-top:0; font-size:12px; width:auto;" onclick="clearProdDateFilter()">সব তারিখ দেখুন</button>
       </div>
     </div>
     <table>
@@ -242,10 +242,15 @@
     </table>
   </div>
 
-  <!-- Raw Material Current Stock Tab -->
+  <!-- Raw Material Current Stock Tab (তারিখ ফিল্টারসহ) -->
   <div id="rmStock" class="section">
     <div class="form-group" style="margin-bottom: 10px;">
       <h3>র মেটেরিয়াল কারেন্ট স্টক (Raw Material Stock)</h3>
+      <div class="filter-box">
+        <label style="font-size:12px; font-weight:bold;">তারিখ বাছাই করুন:</label>
+        <input type="date" id="rmStockFilterDate" onchange="updateAll()">
+        <button style="padding:6px; margin-top:0; font-size:12px; width:auto;" onclick="clearRMDateFilter()">সব তারিখ দেখুন</button>
+      </div>
     </div>
     <table>
       <thead>
@@ -308,8 +313,13 @@
     };
   }
 
-  function clearDateFilter() {
+  function clearProdDateFilter() {
     document.getElementById('stockFilterDate').value = '';
+    updateAll();
+  }
+
+  function clearRMDateFilter() {
+    document.getElementById('rmStockFilterDate').value = '';
     updateAll();
   }
 
@@ -465,11 +475,11 @@
     document.getElementById('dTable').innerHTML = dHtml;
 
     // Product Wise Stock Calculation (With Date Filter)
-    let selectedDate = document.getElementById('stockFilterDate').value;
+    let selectedProdDate = document.getElementById('stockFilterDate').value;
     let pStockMap = {};
 
     prods.forEach(entry => {
-      if (!selectedDate || entry.rawDate === selectedDate) {
+      if (!selectedProdDate || entry.rawDate === selectedProdDate) {
         let key = (entry.item || 'সাধারণ').trim().toLowerCase();
         if(!pStockMap[key]) {
           pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
@@ -479,7 +489,7 @@
     });
 
     delis.forEach(entry => {
-      if (!selectedDate || entry.rawDate === selectedDate) {
+      if (!selectedProdDate || entry.rawDate === selectedProdDate) {
         let key = (entry.item || 'সাধারণ').trim().toLowerCase();
         if(!pStockMap[key]) {
           pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
@@ -491,7 +501,7 @@
     let pSHtml = '';
     let pKeys = Object.keys(pStockMap);
     if(pKeys.length === 0) {
-      pSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো প্রোডাক্ট ডাটা নেই'}</td></tr>`;
+      pSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedProdDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো প্রোডাক্ট ডাটা নেই'}</td></tr>`;
     } else {
       pKeys.forEach(k => {
         let itemData = pStockMap[k];
@@ -532,28 +542,34 @@
     });
     document.getElementById('rmOutTable').innerHTML = rmOHtml;
 
-    // RM Stock Table
+    // Raw Material Stock Calculation (With Date Filter)
+    let selectedRMDate = document.getElementById('rmStockFilterDate').value;
     let stockMap = {};
+
     rmIns.forEach(entry => {
-      let key = entry.item.trim().toLowerCase();
-      if(!stockMap[key]) {
-        stockMap[key] = { name: entry.item, inQty: 0, outQty: 0, unit: entry.unit || 'কেজি' };
+      if (!selectedRMDate || entry.rawDate === selectedRMDate) {
+        let key = entry.item.trim().toLowerCase();
+        if(!stockMap[key]) {
+          stockMap[key] = { name: entry.item, inQty: 0, outQty: 0, unit: entry.unit || 'কেজি' };
+        }
+        stockMap[key].inQty += entry.qty;
       }
-      stockMap[key].inQty += entry.qty;
     });
 
     rmOuts.forEach(entry => {
-      let key = entry.item.trim().toLowerCase();
-      if(!stockMap[key]) {
-        stockMap[key] = { name: entry.item, inQty: 0, outQty: 0, unit: entry.unit || 'কেজি' };
+      if (!selectedRMDate || entry.rawDate === selectedRMDate) {
+        let key = entry.item.trim().toLowerCase();
+        if(!stockMap[key]) {
+          stockMap[key] = { name: entry.item, inQty: 0, outQty: 0, unit: entry.unit || 'কেজি' };
+        }
+        stockMap[key].outQty += entry.qty;
       }
-      stockMap[key].outQty += entry.qty;
     });
 
     let rmSHtml = '';
     let keys = Object.keys(stockMap);
     if(keys.length === 0) {
-      rmSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">কোনো র মেটেরিয়াল ডাটা নেই</td></tr>`;
+      rmSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedRMDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো র মেটেরিয়াল ডাটা নেই'}</td></tr>`;
     } else {
       keys.forEach(k => {
         let itemData = stockMap[k];
@@ -574,4 +590,3 @@
 </script>
 </body>
 </html>
-              
