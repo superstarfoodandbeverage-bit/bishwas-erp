@@ -3,45 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sun Dashboard</title>
-    <!-- Tailwind CSS -->
+    <title>Sun Factory Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        /* সূর্য লোগোর জন্য কাস্টম স্টাইল */
+        .sun-logo {
+            font-size: 30px;
+            position: relative;
+            display: inline-block;
+            line-height: 1;
+        }
+        .sun-logo::after {
+            content: "SUN";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10px;
+            font-weight: bold;
+            color: black;
+            background: white;
+            padding: 1px 2px;
+            border-radius: 4px;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 p-4">
-    <div class="max-w-md mx-auto bg-white rounded-lg shadow p-6">
-        <h1 class="text-2xl font-bold mb-4 text-blue-600">Sun Factory Dashboard</h1>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium">বিক্রি (Total Sales)</label>
-                <input type="number" id="salesInput" class="w-full border p-2 rounded" placeholder="টাকা লিখুন">
-            </div>
-            <div>
-                <label class="block text-sm font-medium">বকেয়া (Total Due)</label>
-                <input type="number" id="dueInput" class="w-full border p-2 rounded" placeholder="টাকা লিখুন">
-            </div>
-            <button onclick="saveData()" class="w-full bg-blue-600 text-white py-2 rounded font-semibold">ডাটা সেভ করুন</button>
+<body class="bg-gray-100 pb-10">
+    <!-- Top Header -->
+    <div class="bg-blue-600 text-white p-4 flex justify-between items-center shadow">
+        <div class="flex items-center space-x-2">
+            <!-- আপডেট করা সূর্য ইমোজি ও SUN লেখা -->
+            <span class="sun-logo">☀️</span> 
         </div>
+        <button onclick="toggleMode()" id="modeBtn" class="bg-yellow-400 text-black px-3 py-1 rounded font-semibold text-sm">Manager Mode</button>
+    </div>
 
-        <hr class="my-6">
-
-        <div class="space-y-3">
-            <div class="bg-blue-50 p-3 rounded flex justify-between">
-                <span>💰 Total Sales:</span>
-                <strong id="displaySales">৳0</strong>
-            </div>
-            <div class="bg-red-50 p-3 rounded flex justify-between">
-                <span>📌 Total Due:</span>
-                <strong id="displayDue">৳0</strong>
-            </div>
+    <!-- Live Date Time -->
+    <div class="max-w-md mx-auto mt-4 px-4">
+        <div class="bg-white rounded-lg shadow p-3 text-center">
+            <div id="liveTime" class="text-xl font-bold text-blue-600">00:00:00</div>
+            <div id="liveDate" class="text-sm text-gray-500">লোড হচ্ছে...</div>
         </div>
     </div>
 
+    <!-- Navigation Tabs -->
+    <div class="max-w-md mx-auto mt-4 px-4 flex space-x-2 overflow-x-auto pb-2">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="bg-blue-600 text-white px-4 py-2 rounded font-semibold text-sm whitespace-nowrap">Dashboard</button>
+        <button onclick="switchTab('production')" id="tab-production" class="bg-white text-gray-700 px-4 py-2 rounded font-semibold text-sm whitespace-nowrap shadow">Production</button>
+        <button onclick="switchTab('delivery')" id="tab-delivery" class="bg-white text-gray-700 px-4 py-2 rounded font-semibold text-sm whitespace-nowrap shadow">Delivery</button>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="max-w-md mx-auto mt-2 px-4 grid grid-cols-2 gap-3">
+        <div class="bg-white p-4 rounded-lg shadow">
+            <span class="text-xs text-gray-500 block">💰 Total Sales</span>
+            <strong id="disp_sales" class="text-lg">৳0</strong>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <span class="text-xs text-gray-500 block">💵 Total Collected</span>
+            <strong id="disp_collected" class="text-lg">৳0</strong>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <span class="text-xs text-gray-500 block">📌 Total Due</span>
+            <strong id="disp_due" class="text-lg">৳0</strong>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <span class="text-xs text-gray-500 block">📦 Total Prod</span>
+            <strong id="disp_prod" class="text-lg">0</strong>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <span class="text-xs text-gray-500 block">🚚 Total Deli</span>
+            <strong id="disp_deli" class="text-lg">0</strong>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <span class="text-xs text-gray-500 block">🏭 Total Stock</span>
+            <strong id="disp_stock" class="text-lg">0</strong>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <span class="text-xs text-gray-500 block">📥 Raw Mat In</span>
+            <strong id="disp_rmIn" class="text-lg">0</strong>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <span class="text-xs text-gray-500 block">📤 Raw Mat Out</span>
+            <strong id="disp_rmOut" class="text-lg">0</strong>
+        </div>
+    </div>
+
+    <!-- MANAGER INPUT VIEW (Hidden by default) -->
+    <div id="view-manager" class="max-w-md mx-auto mt-4 px-4 hidden">
+        <div class="bg-white p-4 rounded-lg shadow space-y-3">
+            <h2 class="font-bold text-gray-700 border-b pb-2">ডাটা এন্ট্রি / আপডেট প্যানেল</h2>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Total Sales (টাকা)</label>
+                <input type="number" id="in_sales" class="w-full border p-2 rounded text-sm" placeholder="0">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Total Collected (টাকা)</label>
+                <input type="number" id="in_collected" class="w-full border p-2 rounded text-sm" placeholder="0">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Total Due (টাকা)</label>
+                <input type="number" id="in_due" class="w-full border p-2 rounded text-sm" placeholder="0">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Total Prod</label>
+                <input type="number" id="in_prod" class="w-full border p-2 rounded text-sm" placeholder="0">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Total Deli</label>
+                <input type="number" id="in_deli" class="w-full border p-2 rounded text-sm" placeholder="0">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Total Stock</label>
+                <input type="number" id="in_stock" class="w-full border p-2 rounded text-sm" placeholder="0">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Raw Mat In</label>
+                <input type="number" id="in_rmIn" class="w-full border p-2 rounded text-sm" placeholder="0">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Raw Mat Out</label>
+                <input type="number" id="in_rmOut" class="w-full border p-2 rounded text-sm" placeholder="0">
+            </div>
+            <button onclick="saveAllData()" class="w-full bg-blue-600 text-white py-2 rounded font-semibold text-sm shadow">সব ডাটা সেভ করুন</button>
+        </div>
+    </div>
+
+    <!-- Script Section -->
     <script>
-        // আপনার Firebase কনফিগারেশন
+        // Real-time Clock
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('liveTime').innerText = now.toLocaleTimeString('en-US');
+            document.getElementById('liveDate').innerText = now.toLocaleDateString('bn-BD', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }, 1000);
+
+        // Firebase Setup
         const firebaseConfig = {
             apiKey: "AiZaSyAtMGCmHjnEFOBnqMAbcHqKxCggFJMNl6I",
             authDomain: "sun-factory-fb344.firebaseapp.com",
@@ -53,28 +152,76 @@
             databaseURL: "https://sun-factory-fb344-default-rtdb.firebaseio.com"
         };
 
-        // Firebase ইনিশিয়ালাইজ করা
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        // ডাটা সেভ করার ফাংশন
-        function saveData() {
-            const sales = document.getElementById('salesInput').value || 0;
-            const due = document.getElementById('dueInput').value || 0;
+        let isManagerMode = false;
+        function toggleMode() {
+            isManagerMode = !isManagerMode;
+            const btn = document.getElementById('modeBtn');
+            const dash = document.getElementById('view-dashboard');
+            const mgr = document.getElementById('view-manager');
 
-            database.ref('dashboard').set({
-                sales: sales,
-                due: due
-            });
-            alert("ডাটা আপডেট হয়েছে!");
+            if(isManagerMode) {
+                btn.innerText = "Exit Manager";
+                btn.classList.add('bg-red-500', 'text-white');
+                btn.classList.remove('bg-yellow-400', 'text-black');
+                dash.classList.add('hidden');
+                mgr.classList.remove('hidden');
+            } else {
+                btn.innerText = "Manager Mode";
+                btn.classList.remove('bg-red-500', 'text-white');
+                btn.classList.add('bg-yellow-400', 'text-black');
+                dash.classList.remove('hidden');
+                mgr.classList.add('hidden');
+            }
         }
 
-        // ডাটা রিয়েল-টাইমে দেখার ফাংশন
-        database.ref('dashboard').on('value', (snapshot) => {
+        function switchTab(tabName) {
+            // Future tab switching
+        }
+
+        function saveAllData() {
+            const data = {
+                sales: document.getElementById('in_sales').value || 0,
+                collected: document.getElementById('in_collected').value || 0,
+                due: document.getElementById('in_due').value || 0,
+                prod: document.getElementById('in_prod').value || 0,
+                deli: document.getElementById('in_deli').value || 0,
+                stock: document.getElementById('in_stock').value || 0,
+                rmIn: document.getElementById('in_rmIn').value || 0,
+                rmOut: document.getElementById('in_rmOut').value || 0
+            };
+
+            database.ref('factoryData').set(data).then(() => {
+                alert("সফলভাবে সেভ হয়েছে!");
+                toggleMode();
+            });
+        }
+
+        // Live Sync with Firebase
+        database.ref('factoryData').on('value', (snapshot) => {
             const data = snapshot.val();
             if(data) {
-                document.getElementById('displaySales').innerText = '৳' + (data.sales || 0);
-                document.getElementById('displayDue').innerText = '৳' + (data.due || 0);
+                // Update Display
+                document.getElementById('disp_sales').innerText = '৳' + (data.sales || 0);
+                document.getElementById('disp_collected').innerText = '৳' + (data.collected || 0);
+                document.getElementById('disp_due').innerText = '৳' + (data.due || 0);
+                document.getElementById('disp_prod').innerText = data.prod || 0;
+                document.getElementById('disp_deli').innerText = data.deli || 0;
+                document.getElementById('disp_stock').innerText = data.stock || 0;
+                document.getElementById('disp_rmIn').innerText = data.rmIn || 0;
+                document.getElementById('disp_rmOut').innerText = data.rmOut || 0;
+
+                // Update Inputs
+                document.getElementById('in_sales').value = data.sales || '';
+                document.getElementById('in_collected').value = data.collected || '';
+                document.getElementById('in_due').value = data.due || '';
+                document.getElementById('in_prod').value = data.prod || '';
+                document.getElementById('in_deli').value = data.deli || '';
+                document.getElementById('in_stock').value = data.stock || '';
+                document.getElementById('in_rmIn').value = data.rmIn || '';
+                document.getElementById('in_rmOut').value = data.rmOut || '';
             }
         });
     </script>
