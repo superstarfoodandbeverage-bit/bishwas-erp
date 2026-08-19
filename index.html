@@ -1,655 +1,82 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="bn">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sun</title>
-<style>
-  * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f6f9; }
-  .top { background-color: #0d6efd; color: white; padding: 15px; text-align: center; display: flex; align-items: center; justify-content: space-between; }
-  
-  .logo-badge {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .logo-badge .emoji {
-    font-size: 40px;
-    line-height: 1;
-  }
-  .logo-badge .text {
-    position: absolute;
-    font-size: 11px;
-    font-weight: 900;
-    color: #111111;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .role-btn {
-    background: #ffc107;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-weight: bold;
-    color: #000;
-    cursor: pointer;
-    font-size: 12px;
-  }
-
-  .clock-banner {
-    background: #ffffff;
-    margin: 10px 15px 5px 15px;
-    padding: 10px;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    border-left: 4px solid #0d6efd;
-  }
-  .clock-time { font-size: 20px; font-weight: bold; color: #0d6efd; }
-  .clock-date { font-size: 12px; color: #6c757d; margin-top: 2px; }
-
-  .nav { display: flex; overflow-x: auto; background-color: #ffffff; padding: 10px; gap: 8px; border-bottom: 1px solid #ddd; white-space: nowrap; }
-  .nav button { flex: 0 0 auto; padding: 10px 14px; border: none; background: #e9ecef; border-radius: 5px; font-weight: bold; cursor: pointer; }
-  .nav button.active { background: #0d6efd; color: white; }
-  .container { padding: 15px; }
-  .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
-  .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-  .stat-title { font-size: 13px; color: #6c757d; margin-bottom: 5px; }
-  .stat-val { font-size: 18px; font-weight: bold; color: #212529; }
-  .form-group { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-  input, select, button.btn-submit { width: 100%; padding: 10px; margin-top: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
-  .qty-group { display: flex; gap: 8px; }
-  .qty-group input { flex: 2; }
-  .qty-group select { flex: 1; }
-  button.btn-submit { background: #198754; color: white; border: none; font-weight: bold; cursor: pointer; margin-top: 12px; }
-  .btn-download { background: #0d6efd; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; font-size: 13px; }
-  table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; font-size: 12px; margin-top: 10px; }
-  th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
-  th { background: #f8f9fa; }
-  .btn-action { padding: 5px 8px; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; margin: 1px; text-decoration: none; display: inline-block; }
-  .btn-del { background: #dc3545; color: white; }
-  .btn-wa { background: #25D366; color: white; font-weight: bold; }
-  .btn-sms { background: #0d6efd; color: white; }
-  .section { display: none; }
-  .section.active { display: block; }
-  .stock-badge { padding: 3px 8px; border-radius: 4px; font-weight: bold; }
-  .stock-positive { background: #d1e7dd; color: #0f5132; }
-  .stock-negative { background: #f8d7da; color: #842029; }
-  .filter-box { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
-  .filter-box input { margin-top: 0; width: auto; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sun Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
-<body>
-
-<div class="top">
-  <div style="width: 70px;"></div>
-  <div class="logo-badge">
-    <span class="emoji">☀️</span>
-    <span class="text">SUN</span>
-  </div>
-  <button class="role-btn" id="roleToggleBtn" onclick="toggleRole()">Manager Mode</button>
-</div>
-
-<div class="clock-banner">
-  <div class="clock-time" id="liveClock">00:00:00 AM</div>
-  <div class="clock-date" id="liveDate">Loading date...</div>
-</div>
-
-<div class="nav">
-  <button class="active" onclick="showTab('dash', this)">Dashboard</button>
-  <button onclick="showTab('prod', this)">Production</button>
-  <button onclick="showTab('deli', this)">Delivery</button>
-  <button onclick="showTab('prodStock', this)">Prod. Stock</button>
-  <button onclick="showTab('rmIn', this)">Mat. In</button>
-  <button onclick="showTab('rmOut', this)">Mat. Out</button>
-  <button onclick="showTab('rmStock', this)">Mat. Stock</button>
-</div>
-
-<div class="container">
-  <!-- Dashboard Tab -->
-  <div id="dash" class="section active">
-    <div class="card-grid">
-      <div class="card"><div class="stat-title">💰 Total Sales</div><div class="stat-val">৳<span id="salesVal">0</span></div></div>
-      <div class="card"><div class="stat-title">💵 Total Collected</div><div class="stat-val">৳<span id="collVal">0</span></div></div>
-      <div class="card"><div class="stat-title">📌 Total Due</div><div class="stat-val">৳<span id="dueVal">0</span></div></div>
-      <div class="card"><div class="stat-title">📦 Total Prod</div><div class="stat-val"><span id="prodVal">0</span></div></div>
-      <div class="card"><div class="stat-title">🚚 Total Deli</div><div class="stat-val"><span id="deliVal">0</span></div></div>
-      <div class="card"><div class="stat-title">🏭 Total Stock</div><div class="stat-val"><span id="stockVal">0</span></div></div>
-      <div class="card"><div class="stat-title">📥 Raw Mat In</div><div class="stat-val"><span id="rmInVal">0</span></div></div>
-      <div class="card"><div class="stat-title">📤 Raw Mat Out</div><div class="stat-val"><span id="rmOutVal">0</span></div></div>
-    </div>
-    <button class="btn-download" onclick="downloadAllBackup()">📥 Download Excel Backup (All Data)</button>
-  </div>
-
-  <!-- Production Tab -->
-  <div id="prod" class="section">
-    <div class="form-group">
-      <h3>নতুন উৎপাদন যোগ করুন</h3>
-      <input type="text" id="pItem" placeholder="পণ্যের নাম (যেমন: টি-শার্ট / সাবান)">
-      <div class="qty-group">
-        <input type="number" id="pQty" placeholder="পরিমাণ">
-        <select id="pUnit">
-          <option value="পিস">পিস</option>
-          <option value="কেজি">কেজি</option>
-          <option value="কার্টুন">কার্টুন</option>
-          <option value="বস্তা">বস্তা</option>
-          <option value="ডজন">ডজন</option>
-        </select>
-      </div>
-      <button class="btn-submit" onclick="saveProd()">সংরক্ষণ করুন</button>
-    </div>
-    <table>
-      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
-      <tbody id="pTable"></tbody>
-    </table>
-  </div>
-
-  <!-- Delivery Tab -->
-  <div id="deli" class="section">
-    <div class="form-group">
-      <h3>নতুন ডেলিভারি যোগ করুন</h3>
-      <input type="text" id="custName" placeholder="কাস্টমারের নাম">
-      <input type="text" id="custPhone" placeholder="মোবাইল নম্বর (যেমন: 017xxxxxxxx)">
-      <input type="text" id="dItem" placeholder="পণ্যের নাম (যেমন: টি-শার্ট / সাবান)">
-      <div class="qty-group">
-        <input type="number" id="dQty" placeholder="পরিমাণ">
-        <select id="dUnit">
-          <option value="পিস">পিস</option>
-          <option value="কেজি">কেজি</option>
-          <option value="কার্টুন">কার্টুন</option>
-          <option value="বস্তা">বস্তা</option>
-          <option value="ডজন">ডজন</option>
-        </select>
-      </div>
-      <input type="number" id="dAmount" placeholder="মোট টাকা">
-      <button class="btn-submit" onclick="saveDeli()">সংরক্ষণ করুন</button>
-    </div>
-    <button class="btn-download" style="background:#198754; margin-bottom:10px;" onclick="downloadDeliExcel()">📊 Download Delivery Report (Excel)</button>
-    <div style="overflow-x:auto;">
-      <table>
-        <thead><tr><th>তারিখ ও সময়</th><th>কাস্টমার</th><th>আইটেম</th><th>পরিমাণ</th><th>মূল্য</th><th>অ্যাকশন</th></tr></thead>
-        <tbody id="dTable"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Product Stock Tab -->
-  <div id="prodStock" class="section">
-    <div class="form-group" style="margin-bottom: 10px;">
-      <h3>পণ্য ভিত্তিক কারেন্ট স্টক (Finished Goods Stock)</h3>
-      <div class="filter-box">
-        <label style="font-size:12px; font-weight:bold;">তারিখ বাছাই করুন:</label>
-        <input type="date" id="stockFilterDate" onchange="updateAll()">
-        <button style="padding:6px; margin-top:0; font-size:12px; width:auto;" onclick="clearProdDateFilter()">সব তারিখ দেখুন</button>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>পণ্যের নাম</th>
-          <th>উৎপাদন</th>
-          <th>ডেলিভারি</th>
-          <th>স্টক ব্যালেন্স</th>
-        </tr>
-      </thead>
-      <tbody id="prodStockTable"></tbody>
-    </table>
-  </div>
-
-  <!-- Raw Material In Tab -->
-  <div id="rmIn" class="section">
-    <div class="form-group">
-      <h3>র মেটেরিয়াল ইন (আমদানি)</h3>
-      <input type="text" id="rmInItem" placeholder="মালের নাম (যেমন: সোডা/সুতা/প্লাস্টিক)">
-      <div class="qty-group">
-        <input type="number" id="rmInQty" placeholder="পরিমাণ">
-        <select id="rmInUnit">
-          <option value="কেজি">কেজি</option>
-          <option value="পিস">পিস</option>
-          <option value="কার্টুন">কার্টুন</option>
-          <option value="বস্তা">বস্তা</option>
-          <option value="ডজন">ডজন</option>
-        </select>
-      </div>
-      <button class="btn-submit" onclick="saveRMIn()">সংরক্ষণ করুন</button>
-    </div>
-    <table>
-      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
-      <tbody id="rmInTable"></tbody>
-    </table>
-  </div>
-
-  <!-- Raw Material Out Tab -->
-  <div id="rmOut" class="section">
-    <div class="form-group">
-      <h3>র মেটেরিয়াল আউট (ব্যবহার)</h3>
-      <input type="text" id="rmOutItem" placeholder="মালের নাম (যেমন: সোডা/সুতা/প্লাস্টিক)">
-      <div class="qty-group">
-        <input type="number" id="rmOutQty" placeholder="পরিমাণ">
-        <select id="rmOutUnit">
-          <option value="কেজি">কেজি</option>
-          <option value="পিস">পিস</option>
-          <option value="কার্টুন">কার্টুন</option>
-          <option value="বস্তা">বস্তা</option>
-          <option value="ডজন">ডজন</option>
-        </select>
-      </div>
-      <button class="btn-submit" onclick="saveRMOut()">সংরক্ষণ করুন</button>
-    </div>
-    <table>
-      <thead><tr><th>তারিখ ও সময়</th><th>আইটেম</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead>
-      <tbody id="rmOutTable"></tbody>
-    </table>
-  </div>
-
-  <!-- Raw Material Current Stock Tab -->
-  <div id="rmStock" class="section">
-    <div class="form-group" style="margin-bottom: 10px;">
-      <h3>র মেটেরিয়াল কারেন্ট স্টক (Raw Material Stock)</h3>
-      <div class="filter-box">
-        <label style="font-size:12px; font-weight:bold;">তারিখ বাছাই করুন:</label>
-        <input type="date" id="rmStockFilterDate" onchange="updateAll()">
-        <button style="padding:6px; margin-top:0; font-size:12px; width:auto;" onclick="clearRMDateFilter()">সব তারিখ দেখুন</button>
-      </div>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>আইটেমের নাম</th>
-          <th>মোট ইন</th>
-          <th>মোট আউট</th>
-          <th>কারেন্ট ব্যালেন্স</th>
-        </tr>
-      </thead>
-      <tbody id="rmStockTable"></tbody>
-    </table>
-  </div>
-
-</div>
-
-<script>
-  let isAdmin = false;
-  const ADMIN_PIN = "1234";
-
-  function toggleRole() {
-    if (!isAdmin) {
-      let pin = prompt("Admin PIN ইনপুট দিন:");
-      if (pin === ADMIN_PIN) {
-        isAdmin = true;
-        document.getElementById('roleToggleBtn').innerText = "Admin Mode";
-        document.getElementById('roleToggleBtn').style.background = "#20c997";
-        alert("আপনি Admin হিসাবে যুক্ত আছেন।");
-      } else if (pin !== null) {
-        alert("ভুল PIN!");
-      }
-    } else {
-      isAdmin = false;
-      document.getElementById('roleToggleBtn').innerText = "Manager Mode";
-      document.getElementById('roleToggleBtn').style.background = "#ffc107";
-      alert("Manager মোডে ফেরত যাওয়া হয়েছে।");
-    }
-  }
-
-  function updateLiveClock() {
-    let d = new Date();
-    document.getElementById('liveClock').innerText = d.toLocaleTimeString();
-    let options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    document.getElementById('liveDate').innerText = d.toLocaleDateString('bn-BD', options);
-  }
-  setInterval(updateLiveClock, 1000);
-  updateLiveClock();
-
-  function getStorage(key) { return JSON.parse(localStorage.getItem(key)) || []; }
-  function setStorage(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-
-  function getDateTime() {
-    let d = new Date();
-    let rawDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    let dateStr = d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
-    let timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return {
-      display: dateStr + '<br><small style="color:#6c757d;">' + timeStr + '</small>',
-      rawDate: rawDate
-    };
-  }
-
-  function clearProdDateFilter() {
-    document.getElementById('stockFilterDate').value = '';
-    updateAll();
-  }
-
-  function clearRMDateFilter() {
-    document.getElementById('rmStockFilterDate').value = '';
-    updateAll();
-  }
-
-  function showTab(id, btn) {
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    btn.classList.add('active');
-    updateAll();
-  }
-
-  function saveProd() {
-    let item = document.getElementById('pItem').value.trim();
-    let qty = parseFloat(document.getElementById('pQty').value);
-    let unit = document.getElementById('pUnit').value;
-    if (!item || !qty) return alert('পণ্যের নাম এবং পরিমাণ দিন');
-    let dt = getDateTime();
-    let list = getStorage('prodList');
-    list.push({ item, qty, unit, date: dt.display, rawDate: dt.rawDate });
-    setStorage('prodList', list);
-    document.getElementById('pItem').value = '';
-    document.getElementById('pQty').value = '';
-    updateAll();
-  }
-
-  function saveDeli() {
-    let name = document.getElementById('custName').value;
-    let phone = document.getElementById('custPhone').value;
-    let item = document.getElementById('dItem').value.trim();
-    let qty = parseFloat(document.getElementById('dQty').value);
-    let unit = document.getElementById('dUnit').value;
-    let amount = parseFloat(document.getElementById('dAmount').value) || 0;
-    if (!name || !item || !qty) return alert('কাস্টমারের নাম, পণ্যের নাম এবং পরিমাণ দিন');
-    
-    let dt = getDateTime();
-    let list = getStorage('deliListDetails');
-    list.push({ name, phone, item, qty, unit, amount, date: dt.display, rawDate: dt.rawDate });
-    setStorage('deliListDetails', list);
-    
-    document.getElementById('custName').value = '';
-    document.getElementById('custPhone').value = '';
-    document.getElementById('dItem').value = '';
-    document.getElementById('dQty').value = '';
-    document.getElementById('dAmount').value = '';
-    updateAll();
-  }
-
-  function saveRMIn() {
-    let item = document.getElementById('rmInItem').value.trim();
-    let qty = parseFloat(document.getElementById('rmInQty').value);
-    let unit = document.getElementById('rmInUnit').value;
-    if (!item || !qty) return alert('আইটেম এবং পরিমাণ দিন');
-    let dt = getDateTime();
-    let list = getStorage('rmInList');
-    list.push({ item, qty, unit, date: dt.display, rawDate: dt.rawDate });
-    setStorage('rmInList', list);
-    document.getElementById('rmInItem').value = '';
-    document.getElementById('rmInQty').value = '';
-    updateAll();
-  }
-
-  function saveRMOut() {
-    let item = document.getElementById('rmOutItem').value.trim();
-    let qty = parseFloat(document.getElementById('rmOutQty').value);
-    let unit = document.getElementById('rmOutUnit').value;
-    if (!item || !qty) return alert('আইটেম এবং পরিমাণ দিন');
-    let dt = getDateTime();
-    let list = getStorage('rmOutList');
-    list.push({ item, qty, unit, date: dt.display, rawDate: dt.rawDate });
-    setStorage('rmOutList', list);
-    document.getElementById('rmOutItem').value = '';
-    document.getElementById('rmOutQty').value = '';
-    updateAll();
-  }
-
-  // ম্যানেজার নিরাপত্তা নিশ্চিত করার আপডেট ফাংশন
-  function delItem(key, i) {
-    if (!isAdmin) {
-      alert("সতর্কতা: ম্যানেজার মোডে কোনো তথ্য ডিলিট করার অনুমতি নেই! শুধুমাত্র Admin PIN দিয়ে ঢুকলে ডিলিট করা যাবে।");
-      return;
-    }
-    if (confirm("আপনি কি নিশ্চিত যে এটি ডিলিট করতে চান?")) {
-      let list = getStorage(key);
-      list.splice(i, 1);
-      setStorage(key, list);
-      updateAll();
-    }
-  }
-
-  function sendWA(i) {
-    let list = getStorage('deliListDetails');
-    let item = list[i];
-    if (!item.phone) return alert('কাস্টমারের মোবাইল নম্বর দেওয়া নেই!');
-    let phone = item.phone.replace(/[^0-9]/g, '');
-    if(phone.startsWith('0')) phone = '88' + phone;
-    let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-    let msg = `প্রিয় ${item.name},\nSun Products থেকে আপনার চালানের রসিদ:\nতারিখ: ${cleanDate}\nপণ্য: ${item.item}\nপরিমাণ: ${item.qty} ${item.unit || ''}\nমোট মূল্য: ৳${item.amount}\nধন্যবাদ!`;
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-  }
-
-  function sendSMS(i) {
-    let list = getStorage('deliListDetails');
-    let item = list[i];
-    if (!item.phone) return alert('মোবাইল নম্বর দেওয়া নেই!');
-    let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-    let msg = `Sun Product: ${item.name}, Item: ${item.item}, Qty: ${item.qty} ${item.unit || ''}, Total: ${item.amount} Tk. Date: ${cleanDate}. Dhanyabad!`;
-    window.open(`sms:${item.phone}?body=${encodeURIComponent(msg)}`, '_self');
-  }
-
-  function downloadCSV(csvContent, filename) {
-    let blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    let link = document.createElement("a");
-    let url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  function downloadDeliExcel() {
-    let delis = getStorage('deliListDetails');
-    if (delis.length === 0) return alert('ডাউনলোড করার মতো কোনো ডেলিভারি ডাটা নেই!');
-    let csv = "তারিখ,কাস্টমার,ফোন,আইটেম,পরিমাণ,ইউনিট,মূল্য\n";
-    delis.forEach(d => {
-      let cleanDate = d.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-      csv += `"${cleanDate}","${d.name}","${d.phone || ''}","${d.item}","${d.qty}","${d.unit || ''}","${d.amount || 0}"\n`;
-    });
-    downloadCSV(csv, `Delivery_Report_${new Date().toISOString().slice(0,10)}.csv`);
-  }
-
-  function downloadAllBackup() {
-    let prods = getStorage('prodList');
-    let delis = getStorage('deliListDetails');
-    let rmIns = getStorage('rmInList');
-    let rmOuts = getStorage('rmOutList');
-
-    let csv = "--- PRODUCTION DATA ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
-    prods.forEach(p => {
-      let cleanDate = p.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-      csv += `"${cleanDate}","${p.item}","${p.qty}","${p.unit || ''}"\n`;
-    });
-
-    csv += "\n--- DELIVERY DATA ---\nতারিখ,কাস্টমার,ফোন,আইটেম,পরিমাণ,ইউনিট,মূল্য\n";
-    delis.forEach(d => {
-      let cleanDate = d.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-      csv += `"${cleanDate}","${d.name}","${d.phone || ''}","${d.item}","${d.qty}","${d.unit || ''}","${d.amount || 0}"\n`;
-    });
-
-    csv += "\n--- RAW MATERIAL IN ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
-    rmIns.forEach(r => {
-      let cleanDate = r.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-      csv += `"${cleanDate}","${r.item}","${r.qty}","${r.unit || ''}"\n`;
-    });
-
-    csv += "\n--- RAW MATERIAL OUT ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
-    rmOuts.forEach(r => {
-      let cleanDate = r.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-      csv += `"${cleanDate}","${r.item}","${r.qty}","${r.unit || ''}"\n`;
-    });
-
-    downloadCSV(csv, `SUN_Factory_Backup_${new Date().toISOString().slice(0,10)}.csv`);
-  }
-
-  function updateAll() {
-    let prods = getStorage('prodList');
-    let delis = getStorage('deliListDetails');
-    let rmIns = getStorage('rmInList');
-    let rmOuts = getStorage('rmOutList');
-    
-    let totalP = prods.reduce((a, b) => a + b.qty, 0);
-    let totalD = delis.reduce((a, b) => a + b.qty, 0);
-    let totalSales = delis.reduce((a, b) => a + (b.amount || 0), 0);
-    let totalRMIn = rmIns.reduce((a, b) => a + b.qty, 0);
-    let totalRMOut = rmOuts.reduce((a, b) => a + b.qty, 0);
-
-    document.getElementById('prodVal').innerText = totalP;
-    document.getElementById('deliVal').innerText = totalD;
-    document.getElementById('salesVal').innerText = totalSales;
-    document.getElementById('dueVal').innerText = totalSales;
-    document.getElementById('stockVal').innerText = totalP - totalD;
-    document.getElementById('rmInVal').innerText = totalRMIn;
-    document.getElementById('rmOutVal').innerText = totalRMOut;
-
-    // Production Table
-    let pHtml = '';
-    prods.forEach((item, i) => {
-      pHtml += `<tr>
-        <td>${item.date}</td>
-        <td>${item.item || 'সাধারণ'}</td>
-        <td>${item.qty} ${item.unit || 'পিস'}</td>
-        <td><button class="btn-action btn-del" onclick="delItem('prodList', ${i})">Delete</button></td>
-      </tr>`;
-    });
-    document.getElementById('pTable').innerHTML = pHtml;
-
-    // Delivery Table
-    let dHtml = '';
-    delis.forEach((item, i) => {
-      dHtml += `<tr>
-        <td>${item.date}</td>
-        <td>${item.name}<br><small>${item.phone || ''}</small></td>
-        <td>${item.item || 'সাধারণ'}</td>
-        <td>${item.qty} ${item.unit || 'পিস'}</td>
-        <td>৳${item.amount || 0}</td>
-        <td>
-          <button class="btn-action btn-wa" onclick="sendWA(${i})">WhatsApp</button>
-          <button class="btn-action btn-sms" onclick="sendSMS(${i})">SMS</button>
-          <button class="btn-action btn-del" onclick="delItem('deliListDetails', ${i})">Delete</button>
-        </td>
-      </tr>`;
-    });
-    document.getElementById('dTable').innerHTML = dHtml;
-
-    // Product Wise Stock Calculation (With Date Filter)
-    let selectedProdDate = document.getElementById('stockFilterDate').value;
-    let pStockMap = {};
-
-    prods.forEach(entry => {
-      if (!selectedProdDate || entry.rawDate === selectedProdDate) {
-        let key = (entry.item || 'সাধারণ').trim().toLowerCase();
-        if(!pStockMap[key]) {
-          pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
-        }
-        pStockMap[key].pQty += entry.qty;
-      }
-    });
-
-    delis.forEach(entry => {
-      if (!selectedProdDate || entry.rawDate === selectedProdDate) {
-        let key = (entry.item || 'সাধারণ').trim().toLowerCase();
-        if(!pStockMap[key]) {
-          pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
-        }
-        pStockMap[key].dQty += entry.qty;
-      }
-    });
-
-    let pSHtml = '';
-    let pKeys = Object.keys(pStockMap);
-    if(pKeys.length === 0) {
-      pSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedProdDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো প্রোডাক্ট ডাটা নেই'}</td></tr>`;
-    } else {
-      pKeys.forEach(k => {
-        let itemData = pStockMap[k];
-        let balance = itemData.pQty - itemData.dQty;
-        let badgeClass = balance >= 0 ? 'stock-positive' : 'stock-negative';
+<body class="bg-gray-100 p-4">
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold mb-4 text-blue-600">Sun Factory Dashboard</h1>
         
-        pSHtml += `<tr>
-          <td><b>${itemData.name}</b></td>
-          <td>${itemData.pQty} ${itemData.unit}</td>
-          <td>${itemData.dQty} ${itemData.unit}</td>
-          <td><span class="stock-badge ${badgeClass}">${balance} ${itemData.unit}</span></td>
-        </tr>`;
-      });
-    }
-    document.getElementById('prodStockTable').innerHTML = pSHtml;
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium">বিক্রি (Total Sales)</label>
+                <input type="number" id="salesInput" class="w-full border p-2 rounded" placeholder="টাকা লিখুন">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">বকেয়া (Total Due)</label>
+                <input type="number" id="dueInput" class="w-full border p-2 rounded" placeholder="টাকা লিখুন">
+            </div>
+            <button onclick="saveData()" class="w-full bg-blue-600 text-white py-2 rounded font-semibold">ডাটা সেভ করুন</button>
+        </div>
 
-    // RM In Table
-    let rmIHtml = '';
-    rmIns.forEach((item, i) => {
-      rmIHtml += `<tr>
-        <td>${item.date}</td>
-        <td>${item.item}</td>
-        <td>${item.qty} ${item.unit || 'কেজি'}</td>
-        <td><button class="btn-action btn-del" onclick="delItem('rmInList', ${i})">Delete</button></td>
-      </tr>`;
-    });
-    document.getElementById('rmInTable').innerHTML = rmIHtml;
+        <hr class="my-6">
 
-    // RM Out Table
-    let rmOHtml = '';
-    rmOuts.forEach((item, i) => {
-      rmOHtml += `<tr>
-        <td>${item.date}</td>
-        <td>${item.item}</td>
-        <td>${item.qty} ${item.unit || 'কেজি'}</td>
-        <td><button class="btn-action btn-del" onclick="delItem('rmOutList', ${i})">Delete</button></td>
-      </tr>`;
-    });
-    document.getElementById('rmOutTable').innerHTML = rmOHtml;
+        <div class="space-y-3">
+            <div class="bg-blue-50 p-3 rounded flex justify-between">
+                <span>💰 Total Sales:</span>
+                <strong id="displaySales">৳0</strong>
+            </div>
+            <div class="bg-red-50 p-3 rounded flex justify-between">
+                <span>📌 Total Due:</span>
+                <strong id="displayDue">৳0</strong>
+            </div>
+        </div>
+    </div>
 
-    // Raw Material Stock Calculation (With Date Filter)
-    let selectedRMDate = document.getElementById('rmStockFilterDate').value;
-    let stockMap = {};
+    <script>
+        // আপনার Firebase কনফিগারেশন
+        const firebaseConfig = {
+            apiKey: "AiZaSyAtMGCmHjnEFOBnqMAbcHqKxCggFJMNl6I",
+            authDomain: "sun-factory-fb344.firebaseapp.com",
+            projectId: "sun-factory-fb344",
+            storageBucket: "sun-factory-fb344.firebasestorage.app",
+            messagingSenderId: "10478798272",
+            appId: "1:10478798272:web:445addc7205fe7c8ef7425",
+            measurementId: "G-HCPRYCLRDZ",
+            databaseURL: "https://sun-factory-fb344-default-rtdb.firebaseio.com"
+        };
 
-    rmIns.forEach(entry => {
-      if (!selectedRMDate || entry.rawDate === selectedRMDate) {
-        let key = entry.item.trim().toLowerCase();
-        if(!stockMap[key]) {
-          stockMap[key] = { name: entry.item, inQty: 0, outQty: 0, unit: entry.unit || 'কেজি' };
+        // Firebase ইনিশিয়ালাইজ করা
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // ডাটা সেভ করার ফাংশন
+        function saveData() {
+            const sales = document.getElementById('salesInput').value || 0;
+            const due = document.getElementById('dueInput').value || 0;
+
+            database.ref('dashboard').set({
+                sales: sales,
+                due: due
+            });
+            alert("ডাটা আপডেট হয়েছে!");
         }
-        stockMap[key].inQty += entry.qty;
-      }
-    });
 
-    rmOuts.forEach(entry => {
-      if (!selectedRMDate || entry.rawDate === selectedRMDate) {
-        let key = entry.item.trim().toLowerCase();
-        if(!stockMap[key]) {
-          stockMap[key] = { name: entry.item, inQty: 0, outQty: 0, unit: entry.unit || 'কেজি' };
-        }
-        stockMap[key].outQty += entry.qty;
-      }
-    });
-
-    let rmSHtml = '';
-    let keys = Object.keys(stockMap);
-    if(keys.length === 0) {
-      rmSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedRMDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো র মেটেরিয়াল ডাটা নেই'}</td></tr>`;
-    } else {
-      keys.forEach(k => {
-        let itemData = stockMap[k];
-        let balance = itemData.inQty - itemData.outQty;
-        let badgeClass = balance >= 0 ? 'stock-positive' : 'stock-negative';
-        
-        rmSHtml += `<tr>
-          <td><b>${itemData.name}</b></td>
-          <td>${itemData.inQty} ${itemData.unit}</td>
-          <td>${itemData.outQty} ${itemData.unit}</td>
-          <td><span class="stock-badge ${badgeClass}">${balance} ${itemData.unit}</span></td>
-        </tr>`;
-      });
-    }
-    document.getElementById('rmStockTable').innerHTML = rmSHtml;
-  }
-  updateAll();
-</script>
+        // ডাটা রিয়েল-টাইমে দেখার ফাংশন
+        database.ref('dashboard').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if(data) {
+                document.getElementById('displaySales').innerText = '৳' + (data.sales || 0);
+                document.getElementById('displayDue').innerText = '৳' + (data.due || 0);
+            }
+        });
+    </script>
 </body>
 </html>
