@@ -100,7 +100,7 @@
 
 <div class="clock-banner">
   <div class="clock-time" id="liveClock">00:00:00 AM</div>
-  <div class="clock-date" id="liveDate">Loading date...</div>
+  <div class="clock-date" id="liveDate">লোড হচ্ছে...</div>
 </div>
 
 <div class="nav">
@@ -311,7 +311,15 @@
 
   let tempCart = [];
 
-  // Real-time synchronization with Firebase
+  // Real-time synchronization with Firebase & Connection Error Handling
+  db.ref('.info/connected').on('value', (snap) => {
+      if (snap.val() === true) {
+          console.log("Connected to Firebase successfully!");
+      } else {
+          console.log("Disconnected from Firebase.");
+      }
+  });
+
   db.ref('sunFactoryData').on('value', (snapshot) => {
       const data = snapshot.val();
       if(data) {
@@ -324,10 +332,14 @@
           factoryData = { prodList: [], deliListDetails: [], rmInList: [], rmOutList: [] };
       }
       renderUI();
+  }, (error) => {
+      console.error("Firebase Read Error: ", error);
   });
 
   function syncToCloud() {
-      db.ref('sunFactoryData').set(factoryData);
+      db.ref('sunFactoryData').set(factoryData).catch((error) => {
+          alert("ডাটা সেভ করতে সমস্যা হয়েছে: " + error.message);
+      });
   }
 
   let isAdmin = false;
@@ -508,4 +520,334 @@
     factoryData.rmInList.push({ item, qty, unit, date: dt.display, rawDate: dt.rawDate });
     syncToCloud();
 
-    document.getElement
+    document.getElementById('rmInItem').value = '';
+    document.getElementById('rmInQty').value = '';
+  }
+
+  function saveRMOut() {
+    let item = document.getElementById('rmOutItem').value.trim();
+    let qty = parseFloat(document.getElementById('rmOutQty').value);
+    let unit = document.getElementById('rmOutUnit').value;
+    if (!item || !qty) return alert('আইটেম এবং পরিমাণ দিন');
+    let dt = getDateTime();
+    
+    if(!factoryData.rmOutList) factoryData.rmOutList = [];
+    factoryData.rmOutList.push({ item, qty, unit, date: dt.display, rawDate: dt.rawDate });
+    syncToCloud();
+
+    document.getElementById('rmOutItem').value = '';
+    document.getElementById('rmOutQty').value = '';
+  }
+
+  function delInvoice(invoiceNo) {
+    if (!isAdmin) {
+      alert("সতর্কতা: ম্যানেজার মোডে কোনো তথ্য ডিলিট করার অনুমতি নেই! শুধুমাত্র Admin PIN দিয়ে ঢুকলে ডিলিট করা যাবে।");
+      return;
+    }
+    if (confirm("আপনি কি নিশ্চিত যে ইনভয়েজ #" + invoiceNo + " এর সব আইটেম ডিলিট করতে চান?")) {
+      factoryData.deliListDetails = factoryData.deliListDetails.filter(item => String(item.invoiceNo) !== String(invoiceNo));
+      syncToCloud();
+    }
+  }
+
+  function delItem(listKey, i) {
+    if (!isAdmin) {
+      alert("সতর্কতা: ম্যানেজার মোডে কোনো তথ্য ডিলিট করার অনুমতি নেই! শুধুমাত্র Admin PIN দিয়ে ঢুকলে ডিলিট করা যাবে।");
+      return;
+    }
+    if (confirm("আপনি কি নিশ্চিত যে এটি ডিলিট করতে চান?")) {
+      factoryData[listKey].splice(i, 1);
+      syncToCloud();
+    }
+  }
+
+  function sendWAByInvoice(invoiceNo) {
+    let list = factoryData.deliListDetails || [];
+    let groupItems = list.filter(item => String(item.invoiceNo) === String(invoiceNo));
+    if (groupItems.length === 0) return alert('চালান ডাটা পাওয়া যায়নি!');
+
+    let customer = groupItems[0];
+    if (!customer.phone) return alert('কাস্টমারের মোবাইল নম্বর দেওয়া নেই!');
+    let phone = customer.phone.replace(/[^0-9]/g, '');
+    if(phone.startsWith('0')) phone = '88' + phone;
+
+    let cleanDate = customer.date.replace(/<[^>]*>?/gm, '');
+    
+    let msg = `প্রিয় ${customer.name},\nSun Products থেকে আপনার ইনভয়েজ নাম্বার: #${invoiceNo}\nতারিখ: ${cleanDate}\n\n`;
+    let totalAmount = 0;
+
+    groupItems.forEach((it, idx) => {
+      msg += `${idx + 1}. ${it.item} - ${it.qty} ${it.unit || 'পিস'} (৳${it.amount || 0})\n`;
+      totalAmount += Number(it.amount || 0);
+    });
+
+    msg += `\nমোট মূল্য: ৳${totalAmount}\nধন্যবাদ!`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  function sendSMSByInvoice(invoiceNo) {
+    let list = factoryData.deliListDetails || [];
+    let groupItems = list.filter(item => String(item.invoiceNo) === String(invoiceNo));
+    if (groupItems.length === 0) return alert('চালান ডাটা পাওয়া যায়নি!');
+
+    let customer = groupItems[0];
+    if (!customer.phone) return alert('মোবাইল নম্বর দেওয়া নেই!');
+    
+    let cleanDate = customer.date.replace(/<[^>]*>?/gm, '');
+    let msg = `Sun Products Invoice #${invoiceNo} (${customer.name}, ${cleanDate}):\n`;
+    let totalAmount = 0;
+
+    groupItems.forEach((it, idx) => {
+      msg += `${idx + 1}.${it.item}:${it.qty}${it.unit || 'pc'}=${it.amount}tk\n`;
+      totalAmount += Number(it.amount || 0);
+    });
+    msg += `Total: ${totalAmount} Tk. Dhanyabad!`;
+
+    window.open(`sms:${customer.phone}?body=${encodeURIComponent(msg)}`, '_self');
+  }
+
+  function downloadCSV(csvContent, filename) {
+    let blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    let link = document.createElement("a");
+    let url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function downloadDeliExcel() {
+    let delis = factoryData.deliListDetails || [];
+    if (delis.length === 0) return alert('ডাউনলোড করার মতো কোনো ডেলিভারি ডাটা নেই!');
+    let csv = "ইনভয়েজ নং,তারিখ,কাস্টমার,ফোন,আইটেম,পরিমাণ,ইউনিট,মূল্য\n";
+    delis.forEach(d => {
+      let cleanDate = d.date.replace(/<[^>]*>?/gm, '');
+      csv += `"${d.invoiceNo}","${cleanDate}","${d.name}","${d.phone || ''}","${d.item}","${d.qty}","${d.unit || ''}","${d.amount || 0}"\n`;
+    });
+    downloadCSV(csv, `Delivery_Report_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  function downloadAllBackup() {
+    let prods = factoryData.prodList || [];
+    let delis = factoryData.deliListDetails || [];
+    let rmIns = factoryData.rmInList || [];
+    let rmOuts = factoryData.rmOutList || [];
+
+    let csv = "--- PRODUCTION DATA ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
+    prods.forEach(p => {
+      let cleanDate = p.date.replace(/<[^>]*>?/gm, '');
+      csv += `"${cleanDate}","${p.item}","${p.qty}","${p.unit || ''}"\n`;
+    });
+
+    csv += "\n--- DELIVERY DATA ---\nইনভয়েজ নং,তারিখ,কাস্টমার,ফোন,আইটেম,পরিমাণ,ইউনিট,মূল্য\n";
+    delis.forEach(d => {
+      let cleanDate = d.date.replace(/<[^>]*>?/gm, '');
+      csv += `"${d.invoiceNo}","${cleanDate}","${d.name}","${d.phone || ''}","${d.item}","${d.qty}","${d.unit || ''}","${d.amount || 0}"\n`;
+    });
+
+    csv += "\n--- RAW MATERIAL IN ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
+    rmIns.forEach(r => {
+      let cleanDate = r.date.replace(/<[^>]*>?/gm, '');
+      csv += `"${cleanDate}","${r.item}","${r.qty}","${r.unit || ''}"\n`;
+    });
+
+    csv += "\n--- RAW MATERIAL OUT ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
+    rmOuts.forEach(r => {
+      let cleanDate = r.date.replace(/<[^>]*>?/gm, '');
+      csv += `"${cleanDate}","${r.item}","${r.qty}","${r.unit || ''}"\n`;
+    });
+
+    downloadCSV(csv, `SUN_Factory_Backup_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  function updateAll() { renderUI(); }
+
+  function renderUI() {
+    let prods = factoryData.prodList || [];
+    let delis = factoryData.deliListDetails || [];
+    let rmIns = factoryData.rmInList || [];
+    let rmOuts = factoryData.rmOutList || [];
+    
+    let totalP = prods.reduce((a, b) => a + Number(b.qty), 0);
+    let totalD = delis.reduce((a, b) => a + Number(b.qty), 0);
+    let totalSales = delis.reduce((a, b) => a + Number(b.amount || 0), 0);
+    let totalRMIn = rmIns.reduce((a, b) => a + Number(b.qty), 0);
+    let totalRMOut = rmOuts.reduce((a, b) => a + Number(b.qty), 0);
+
+    document.getElementById('prodVal').innerText = totalP;
+    document.getElementById('deliVal').innerText = totalD;
+    document.getElementById('salesVal').innerText = totalSales;
+    document.getElementById('dueVal').innerText = totalSales;
+    document.getElementById('stockVal').innerText = totalP - totalD;
+    document.getElementById('rmInVal').innerText = totalRMIn;
+    document.getElementById('rmOutVal').innerText = totalRMOut;
+
+    // Production Table
+    let pHtml = '';
+    prods.forEach((item, i) => {
+      pHtml += `<tr>
+        <td>${item.date}</td>
+        <td>${item.item || 'সাধারণ'}</td>
+        <td>${item.qty} ${item.unit || 'পিস'}</td>
+        <td><button class="btn-action btn-del" onclick="delItem('prodList', ${i})">Delete</button></td>
+      </tr>`;
+    });
+    document.getElementById('pTable').innerHTML = pHtml;
+
+    // Group Deliveries by Sequential Invoice Number
+    let invoiceGroups = {};
+    delis.forEach(item => {
+      let invNo = item.invoiceNo || '1'; 
+      if(!invoiceGroups[invNo]) {
+        invoiceGroups[invNo] = {
+          date: item.date,
+          name: item.name,
+          phone: item.phone,
+          items: []
+        };
+      }
+      invoiceGroups[invNo].items.push(item);
+    });
+
+    let dHtml = '';
+    Object.keys(invoiceGroups).sort().reverse().forEach(invNo => {
+      let group = invoiceGroups[invNo];
+      let itemsHtml = '<ul style="margin:0; padding-left:15px;">';
+      let totalInvAmount = 0;
+
+      group.items.forEach(it => {
+        itemsHtml += `<li>${it.item} - ${it.qty} ${it.unit || 'পিস'} (৳${it.amount || 0})</li>`;
+        totalInvAmount += Number(it.amount || 0);
+      });
+      itemsHtml += '</ul>';
+
+      dHtml += `<tr>
+        <td><b>#${invNo}</b><br>${group.date}</td>
+        <td><b>${group.name}</b><br><small>${group.phone || ''}</small></td>
+        <td>${itemsHtml}</td>
+        <td><b>৳${totalInvAmount}</b></td>
+        <td>
+          <button class="btn-action btn-wa" onclick="sendWAByInvoice('${invNo}')">WhatsApp</button>
+          <button class="btn-action btn-sms" onclick="sendSMSByInvoice('${invNo}')">SMS</button>
+          <button class="btn-action btn-del" onclick="delInvoice('${invNo}')">Delete</button>
+        </td>
+      </tr>`;
+    });
+    document.getElementById('dTable').innerHTML = dHtml;
+
+    // Product Wise Stock Calculation (With Date Filter)
+    let selectedProdDate = document.getElementById('stockFilterDate').value;
+    let pStockMap = {};
+
+    prods.forEach(entry => {
+      if (!selectedProdDate || entry.rawDate === selectedProdDate) {
+        let key = (entry.item || 'সাধারণ').trim().toLowerCase();
+        if(!pStockMap[key]) {
+          pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
+        }
+        pStockMap[key].pQty += Number(entry.qty);
+      }
+    });
+
+    delis.forEach(entry => {
+      if (!selectedProdDate || entry.rawDate === selectedProdDate) {
+        let key = (entry.item || 'সাধারণ').trim().toLowerCase();
+        if(!pStockMap[key]) {
+          pStockMap[key] = { name: entry.item || 'সাধারণ', pQty: 0, dQty: 0, unit: entry.unit || 'পিস' };
+        }
+        pStockMap[key].dQty += Number(entry.qty);
+      }
+    });
+
+    let pSHtml = '';
+    let pKeys = Object.keys(pStockMap);
+    if(pKeys.length === 0) {
+      pSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedProdDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো প্রোডাক্ট ডাটা নেই'}</td></tr>`;
+    } else {
+      pKeys.forEach(k => {
+        let itemData = pStockMap[k];
+        let balance = itemData.pQty - itemData.dQty;
+        let badgeClass = balance >= 0 ? 'stock-positive' : 'stock-negative';
+        
+        pSHtml += `<tr>
+          <td><b>${itemData.name}</b></td>
+          <td>${itemData.pQty} ${itemData.unit}</td>
+          <td>${itemData.dQty} ${itemData.unit}</td>
+          <td><span class="stock-badge ${badgeClass}">${balance} ${itemData.unit}</span></td>
+        </tr>`;
+      });
+    }
+    document.getElementById('prodStockTable').innerHTML = pSHtml;
+
+    // RM In Table
+    let rmIHtml = '';
+    rmIns.forEach((item, i) => {
+      rmIHtml += `<tr>
+        <td>${item.date}</td>
+        <td>${item.item}</td>
+        <td>${item.qty} ${item.unit || 'কেজি'}</td>
+        <td><button class="btn-action btn-del" onclick="delItem('rmInList', ${i})">Delete</button></td>
+      </tr>`;
+    });
+    document.getElementById('rmInTable').innerHTML = rmIHtml;
+
+    // RM Out Table
+    let rmOHtml = '';
+    rmOuts.forEach((item, i) => {
+      rmOHtml += `<tr>
+        <td>${item.date}</td>
+        <td>${item.item}</td>
+        <td>${item.qty} ${item.unit || 'কেজি'}</td>
+        <td><button class="btn-action btn-del" onclick="delItem('rmOutList', ${i})">Delete</button></td>
+      </tr>`;
+    });
+    document.getElementById('rmOutTable').innerHTML = rmOHtml;
+
+    // Raw Material Stock Calculation (With Date Filter)
+    let selectedRMDate = document.getElementById('rmStockFilterDate').value;
+    let stockMap = {};
+
+    rmIns.forEach(entry => {
+      if (!selectedRMDate || entry.rawDate === selectedRMDate) {
+        let key = entry.item.trim().toLowerCase();
+        if(!stockMap[key]) {
+          stockMap[key] = { name: entry.item, inQty: 0, outQty: 0, unit: entry.unit || 'কেজি' };
+        }
+        stockMap[key].inQty += Number(entry.qty);
+      }
+    });
+
+    rmOuts.forEach(entry => {
+      if (!selectedRMDate || entry.rawDate === selectedRMDate) {
+        let key = entry.item.trim().toLowerCase();
+        if(!stockMap[key]) {
+          stockMap[key] = { name: entry.item, inQty: 0, outQty: 0, unit: entry.unit || 'কেজি' };
+        }
+        stockMap[key].outQty += Number(entry.qty);
+      }
+    });
+
+    let rmSHtmlStr = '';
+    let keys = Object.keys(stockMap);
+    if(keys.length === 0) {
+      rmSHtmlStr = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedRMDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো র মেটেরিয়াল ডাটা নেই'}</td></tr>`;
+    } else {
+      keys.forEach(k => {
+        let itemData = stockMap[k];
+        let balance = itemData.inQty - itemData.outQty;
+        let badgeClass = balance >= 0 ? 'stock-positive' : 'stock-negative';
+        
+        rmSHtmlStr += `<tr>
+          <td><b>${itemData.name}</b></td>
+          <td>${itemData.inQty} ${itemData.unit}</td>
+          <td>${itemData.outQty} ${itemData.unit}</td>
+          <td><span class="stock-badge ${badgeClass}">${balance} ${itemData.unit}</span></td>
+        </tr>`;
+      });
+    }
+    document.getElementById('rmStockTable').innerHTML = rmSHtmlStr;
+  }
+</script>
+</body>
+</html>
