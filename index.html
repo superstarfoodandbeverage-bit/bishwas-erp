@@ -542,10 +542,9 @@
       alert("সতর্কতা: ম্যানেজার মোডে কোনো তথ্য ডিলিট করার অনুমতি নেই! শুধুমাত্র Admin PIN দিয়ে ঢুকলে ডিলিট করা যাবে।");
       return;
     }
-    if (confirm("আপনি কি নিশ্চিত যে এটি ডিলিট করতে চান?")) {
-      factoryData[listKey].splice(i, 1);
-      syncToCloud();
-    }
+    factoryData[listKey].splice(i, 1);
+syncToCloud();
+
   }
 
   function sendWAByInvoice(invoiceNo) {
