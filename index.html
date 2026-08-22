@@ -311,15 +311,6 @@
 
   let tempCart = [];
 
-  // Real-time synchronization with Firebase & Connection Error Handling
-  db.ref('.info/connected').on('value', (snap) => {
-      if (snap.val() === true) {
-          console.log("Connected to Firebase successfully!");
-      } else {
-          console.log("Disconnected from Firebase.");
-      }
-  });
-
   db.ref('sunFactoryData').on('value', (snapshot) => {
       const data = snapshot.val();
       if(data) {
@@ -332,14 +323,10 @@
           factoryData = { prodList: [], deliListDetails: [], rmInList: [], rmOutList: [] };
       }
       renderUI();
-  }, (error) => {
-      console.error("Firebase Read Error: ", error);
   });
 
   function syncToCloud() {
-      db.ref('sunFactoryData').set(factoryData).catch((error) => {
-          alert("ডাটা সেভ করতে সমস্যা হয়েছে: " + error.message);
-      });
+      db.ref('sunFactoryData').set(factoryData);
   }
 
   let isAdmin = false;
@@ -698,7 +685,7 @@
     // Group Deliveries by Sequential Invoice Number
     let invoiceGroups = {};
     delis.forEach(item => {
-      let invNo = item.invoiceNo || '1'; 
+      let invNo = item.invoiceNo !== undefined && item.invoiceNo !== null ? String(item.invoiceNo) : '1'; 
       if(!invoiceGroups[invNo]) {
         invoiceGroups[invNo] = {
           date: item.date,
