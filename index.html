@@ -186,7 +186,7 @@
     <button class="btn-download" style="background:#198754; margin-bottom:10px;" onclick="downloadDeliExcel()">📊 Download Delivery Report (Excel)</button>
     <div style="overflow-x:auto;">
       <table>
-        <thead><tr><th>তারিখ ও সময়</th><th>কাস্টমার</th><th>আইটেম</th><th>পরিমাণ</th><th>মূল্য</th><th>অ্যাকশন</th></tr></thead>
+        <thead><tr><th>চালান আইডি / সময়</th><th>কাস্টমার</th><th>আইটেম বিবরণ</th><th>মোট টাকা</th><th>অ্যাকশন</th></tr></thead>
         <tbody id="dTable"></tbody>
       </table>
     </div>
@@ -366,9 +366,11 @@
     let rawDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     let dateStr = d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
     let timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    let timestamp = d.getTime(); // Unique ID for invoice grouping
     return {
       display: dateStr + '<br><small style="color:#6c757d;">' + timeStr + '</small>',
-      rawDate: rawDate
+      rawDate: rawDate,
+      timestamp: timestamp
     };
   }
 
@@ -458,9 +460,10 @@
     let dt = getDateTime();
     if(!factoryData.deliListDetails) factoryData.deliListDetails = [];
 
-    // Add all cart items to delivery list
+    // Add all cart items with same invoiceId (timestamp)
     tempCart.forEach(cartItem => {
       factoryData.deliListDetails.push({
+        invoiceId: dt.timestamp,
         name,
         phone,
         item: cartItem.item,
@@ -512,6 +515,17 @@
     document.getElementById('rmOutQty').value = '';
   }
 
+  function delInvoice(invoiceId) {
+    if (!isAdmin) {
+      alert("সতর্কতা: ম্যানেজার মোডে কোনো তথ্য ডিলিট করার অনুমতি নেই! শুধুমাত্র Admin PIN দিয়ে ঢুকলে ডিলিট করা যাবে।");
+      return;
+    }
+    if (confirm("আপনি কি নিশ্চিত যে এই চালানের সব আইটেম ডিলিট করতে চান?")) {
+      factoryData.deliListDetails = factoryData.deliListDetails.filter(item => String(item.invoiceId) !== String(invoiceId));
+      syncToCloud();
+    }
+  }
+
   function delItem(listKey, i) {
     if (!isAdmin) {
       alert("সতর্কতা: ম্যানেজার মোডে কোনো তথ্য ডিলিট করার অনুমতি নেই! শুধুমাত্র Admin PIN দিয়ে ঢুকলে ডিলিট করা যাবে।");
@@ -523,24 +537,49 @@
     }
   }
 
-  function sendWA(i) {
+  function sendWAByInvoice(invoiceId) {
     let list = factoryData.deliListDetails || [];
-    let item = list[i];
-    if (!item.phone) return alert('কাস্টমারের মোবাইল নম্বর দেওয়া নেই!');
-    let phone = item.phone.replace(/[^0-9]/g, '');
+    let groupItems = list.filter(item => String(item.invoiceId) === String(invoiceId));
+    if (groupItems.length === 0) return alert('চালান ডাটা পাওয়া যায়নি!');
+
+    let customer = groupItems[0];
+    if (!customer.phone) return alert('কাস্টমারের মোবাইল নম্বর দেওয়া নেই!');
+    let phone = customer.phone.replace(/[^0-9]/g, '');
     if(phone.startsWith('0')) phone = '88' + phone;
-    let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-    let msg = `প্রিয় ${item.name},\nSun Products থেকে আপনার চালানের রসিদ:\nতারিখ: ${cleanDate}\nপণ্য: ${item.item}\nপরিমাণ: ${item.qty} ${item.unit || ''}\nমোট মূল্য: ৳${item.amount}\nধন্যবাদ!`;
+
+    let cleanDate = customer.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+    
+    let msg = `প্রিয় ${customer.name},\nSun Products থেকে আপনার চালানের বিবরণ:\nতারিখ: ${cleanDate}\n\n`;
+    let totalAmount = 0;
+
+    groupItems.forEach((it, idx) => {
+      msg += `${idx + 1}. ${it.item} - ${it.qty} ${it.unit || 'পিস'} (৳${it.amount || 0})\n`;
+      totalAmount += Number(it.amount || 0);
+    });
+
+    msg += `\nমোট মূল্য: ৳${totalAmount}\nধন্যবাদ!`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  function sendSMS(i) {
+  function sendSMSByInvoice(invoiceId) {
     let list = factoryData.deliListDetails || [];
-    let item = list[i];
-    if (!item.phone) return alert('মোবাইল নম্বর দেওয়া নেই!');
-    let cleanDate = item.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-    let msg = `Sun Product: ${item.name}, Item: ${item.item}, Qty: ${item.qty} ${item.unit || ''}, Total: ${item.amount} Tk. Date: ${cleanDate}. Dhanyabad!`;
-    window.open(`sms:${item.phone}?body=${encodeURIComponent(msg)}`, '_self');
+    let groupItems = list.filter(item => String(item.invoiceId) === String(invoiceId));
+    if (groupItems.length === 0) return alert('চালান ডাটা পাওয়া যায়নি!');
+
+    let customer = groupItems[0];
+    if (!customer.phone) return alert('মোবাইল নম্বর দেওয়া নেই!');
+    
+    let cleanDate = customer.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+    let msg = `Sun Product Invoice (${customer.name}, ${cleanDate}):\n`;
+    let totalAmount = 0;
+
+    groupItems.forEach((it, idx) => {
+      msg += `${idx + 1}.${it.item}:${it.qty}${it.unit || 'pc'}=${it.amount}tk\n`;
+      totalAmount += Number(it.amount || 0);
+    });
+    msg += `Total: ${totalAmount} Tk. Dhanyabad!`;
+
+    window.open(`sms:${customer.phone}?body=${encodeURIComponent(msg)}`, '_self');
   }
 
   function downloadCSV(csvContent, filename) {
@@ -632,19 +671,42 @@
     });
     document.getElementById('pTable').innerHTML = pHtml;
 
-    // Delivery Table
+    // Group Deliveries by Invoice ID for Display & Messaging
+    let invoiceGroups = {};
+    delis.forEach(item => {
+      let invId = item.invoiceId || item.date; // Fallback for older items
+      if(!invoiceGroups[invId]) {
+        invoiceGroups[invId] = {
+          date: item.date,
+          name: item.name,
+          phone: item.phone,
+          items: []
+        };
+      }
+      invoiceGroups[invId].items.push(item);
+    });
+
     let dHtml = '';
-    delis.forEach((item, i) => {
+    Object.keys(invoiceGroups).reverse().forEach(invId => {
+      let group = invoiceGroups[invId];
+      let itemsHtml = '<ul style="margin:0; padding-left:15px;">';
+      let totalInvAmount = 0;
+
+      group.items.forEach(it => {
+        itemsHtml += `<li>${it.item} - ${it.qty} ${it.unit || 'পিস'} (৳${it.amount || 0})</li>`;
+        totalInvAmount += Number(it.amount || 0);
+      });
+      itemsHtml += '</ul>';
+
       dHtml += `<tr>
-        <td>${item.date}</td>
-        <td>${item.name}<br><small>${item.phone || ''}</small></td>
-        <td>${item.item || 'সাধারণ'}</td>
-        <td>${item.qty} ${item.unit || 'পিস'}</td>
-        <td>৳${item.amount || 0}</td>
+        <td>${group.date}</td>
+        <td><b>${group.name}</b><br><small>${group.phone || ''}</small></td>
+        <td>${itemsHtml}</td>
+        <td><b>৳${totalInvAmount}</b></td>
         <td>
-          <button class="btn-action btn-wa" onclick="sendWA(${i})">WhatsApp</button>
-          <button class="btn-action btn-sms" onclick="sendSMS(${i})">SMS</button>
-          <button class="btn-action btn-del" onclick="delItem('deliListDetails', ${i})">Delete</button>
+          <button class="btn-action btn-wa" onclick="sendWAByInvoice('${invId}')">WhatsApp</button>
+          <button class="btn-action btn-sms" onclick="sendSMSByInvoice('${invId}')">SMS</button>
+          <button class="btn-action btn-del" onclick="delInvoice('${invId}')">Delete</button>
         </td>
       </tr>`;
     });
@@ -742,17 +804,18 @@
       }
     });
 
-    let rmSHtml = '';
+    let rmSHtml = {};
     let keys = Object.keys(stockMap);
+    let rmSHtmlStr = '';
     if(keys.length === 0) {
-      rmSHtml = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedRMDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো র মেটেরিয়াল ডাটা নেই'}</td></tr>`;
+      rmSHtmlStr = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedRMDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো র মেটেরিয়াল ডাটা নেই'}</td></tr>`;
     } else {
       keys.forEach(k => {
         let itemData = stockMap[k];
         let balance = itemData.inQty - itemData.outQty;
         let badgeClass = balance >= 0 ? 'stock-positive' : 'stock-negative';
         
-        rmSHtml += `<tr>
+        rmSHtmlStr += `<tr>
           <td><b>${itemData.name}</b></td>
           <td>${itemData.inQty} ${itemData.unit}</td>
           <td>${itemData.outQty} ${itemData.unit}</td>
@@ -760,7 +823,7 @@
         </tr>`;
       });
     }
-    document.getElementById('rmStockTable').innerHTML = rmSHtml;
+    document.getElementById('rmStockTable').innerHTML = rmSHtmlStr;
   }
 </script>
 </body>
