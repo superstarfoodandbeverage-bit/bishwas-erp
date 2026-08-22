@@ -186,7 +186,7 @@
     <button class="btn-download" style="background:#198754; margin-bottom:10px;" onclick="downloadDeliExcel()">📊 Download Delivery Report (Excel)</button>
     <div style="overflow-x:auto;">
       <table>
-        <thead><tr><th>চালান আইডি / সময়</th><th>কাস্টমার</th><th>আইটেম বিবরণ</th><th>মোট টাকা</th><th>অ্যাকশন</th></tr></thead>
+        <thead><tr><th>ইনভয়েজ ও সময়</th><th>কাস্টমার</th><th>আইটেম বিবরণ</th><th>মোট টাকা</th><th>অ্যাকশন</th></tr></thead>
         <tbody id="dTable"></tbody>
       </table>
     </div>
@@ -366,11 +366,9 @@
     let rawDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     let dateStr = d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
     let timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    let timestamp = d.getTime(); // Unique ID for invoice grouping
     return {
       display: dateStr + '<br><small style="color:#6c757d;">' + timeStr + '</small>',
-      rawDate: rawDate,
-      timestamp: timestamp
+      rawDate: rawDate
     };
   }
 
@@ -407,7 +405,6 @@
     document.getElementById('pQty').value = '';
   }
 
-  // Cart Functions for Delivery
   function addToCart() {
     let item = document.getElementById('dItem').value.trim();
     let qty = parseFloat(document.getElementById('dQty').value);
@@ -460,10 +457,26 @@
     let dt = getDateTime();
     if(!factoryData.deliListDetails) factoryData.deliListDetails = [];
 
-    // Add all cart items with same invoiceId (timestamp)
+    let dObj = new Date();
+    let dayStr = String(dObj.getDate());
+    let monthStr = String(dObj.getMonth() + 1);
+    let yearStr = String(dObj.getFullYear()).slice(-2);
+    let prefixDate = dayStr + monthStr + yearStr;
+
+    let todayInvoices = {};
+    factoryData.deliListDetails.forEach(item => {
+      if(item.invoiceNo && String(item.invoiceNo).startsWith(prefixDate)) {
+        todayInvoices[item.invoiceNo] = true;
+      }
+    });
+
+    let nextSerial = Object.keys(todayInvoices).length + 1;
+    let formattedSerial = String(nextSerial).padStart(2, '0');
+    let nextInvoiceNo = prefixDate + formattedSerial;
+
     tempCart.forEach(cartItem => {
       factoryData.deliListDetails.push({
-        invoiceId: dt.timestamp,
+        invoiceNo: nextInvoiceNo,
         name,
         phone,
         item: cartItem.item,
@@ -477,12 +490,11 @@
 
     syncToCloud();
 
-    // Reset Form & Cart
     document.getElementById('custName').value = '';
     document.getElementById('custPhone').value = '';
     tempCart = [];
     renderCart();
-    alert("সকল ডেলিভারি সফলভাবে সংরক্ষিত হয়েছে!");
+    alert("ইনভয়েজ #" + nextInvoiceNo + " সফলভাবে সংরক্ষিত হয়েছে!");
   }
 
   function saveRMIn() {
@@ -515,13 +527,13 @@
     document.getElementById('rmOutQty').value = '';
   }
 
-  function delInvoice(invoiceId) {
+  function delInvoice(invoiceNo) {
     if (!isAdmin) {
       alert("সতর্কতা: ম্যানেজার মোডে কোনো তথ্য ডিলিট করার অনুমতি নেই! শুধুমাত্র Admin PIN দিয়ে ঢুকলে ডিলিট করা যাবে।");
       return;
     }
-    if (confirm("আপনি কি নিশ্চিত যে এই চালানের সব আইটেম ডিলিট করতে চান?")) {
-      factoryData.deliListDetails = factoryData.deliListDetails.filter(item => String(item.invoiceId) !== String(invoiceId));
+    if (confirm("আপনি কি নিশ্চিত যে ইনভয়েজ #" + invoiceNo + " এর সব আইটেম ডিলিট করতে চান?")) {
+      factoryData.deliListDetails = factoryData.deliListDetails.filter(item => String(item.invoiceNo) !== String(invoiceNo));
       syncToCloud();
     }
   }
@@ -537,9 +549,9 @@
     }
   }
 
-  function sendWAByInvoice(invoiceId) {
+  function sendWAByInvoice(invoiceNo) {
     let list = factoryData.deliListDetails || [];
-    let groupItems = list.filter(item => String(item.invoiceId) === String(invoiceId));
+    let groupItems = list.filter(item => String(item.invoiceNo) === String(invoiceNo));
     if (groupItems.length === 0) return alert('চালান ডাটা পাওয়া যায়নি!');
 
     let customer = groupItems[0];
@@ -547,9 +559,9 @@
     let phone = customer.phone.replace(/[^0-9]/g, '');
     if(phone.startsWith('0')) phone = '88' + phone;
 
-    let cleanDate = customer.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+    let cleanDate = customer.date.replace(/<[^>]*>?/gm, '');
     
-    let msg = `প্রিয় ${customer.name},\nSun Products থেকে আপনার চালানের বিবরণ:\nতারিখ: ${cleanDate}\n\n`;
+    let msg = `প্রিয় ${customer.name},\nSun Products থেকে আপনার ইনভয়েজ নাম্বার: #${invoiceNo}\nতারিখ: ${cleanDate}\n\n`;
     let totalAmount = 0;
 
     groupItems.forEach((it, idx) => {
@@ -561,16 +573,16 @@
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
-  function sendSMSByInvoice(invoiceId) {
+  function sendSMSByInvoice(invoiceNo) {
     let list = factoryData.deliListDetails || [];
-    let groupItems = list.filter(item => String(item.invoiceId) === String(invoiceId));
+    let groupItems = list.filter(item => String(item.invoiceNo) === String(invoiceNo));
     if (groupItems.length === 0) return alert('চালান ডাটা পাওয়া যায়নি!');
 
     let customer = groupItems[0];
     if (!customer.phone) return alert('মোবাইল নম্বর দেওয়া নেই!');
     
-    let cleanDate = customer.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-    let msg = `Sun Product Invoice (${customer.name}, ${cleanDate}):\n`;
+    let cleanDate = customer.date.replace(/<[^>]*>?/gm, '');
+    let msg = `Sun Products Invoice #${invoiceNo} (${customer.name}, ${cleanDate}):\n`;
     let totalAmount = 0;
 
     groupItems.forEach((it, idx) => {
@@ -596,10 +608,10 @@
   function downloadDeliExcel() {
     let delis = factoryData.deliListDetails || [];
     if (delis.length === 0) return alert('ডাউনলোড করার মতো কোনো ডেলিভারি ডাটা নেই!');
-    let csv = "তারিখ,কাস্টমার,ফোন,আইটেম,পরিমাণ,ইউনিট,মূল্য\n";
+    let csv = "ইনভয়েজ নং,তারিখ,কাস্টমার,ফোন,আইটেম,পরিমাণ,ইউনিট,মূল্য\n";
     delis.forEach(d => {
-      let cleanDate = d.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-      csv += `"${cleanDate}","${d.name}","${d.phone || ''}","${d.item}","${d.qty}","${d.unit || ''}","${d.amount || 0}"\n`;
+      let cleanDate = d.date.replace(/<[^>]*>?/gm, '');
+      csv += `"${d.invoiceNo}","${cleanDate}","${d.name}","${d.phone || ''}","${d.item}","${d.qty}","${d.unit || ''}","${d.amount || 0}"\n`;
     });
     downloadCSV(csv, `Delivery_Report_${new Date().toISOString().slice(0,10)}.csv`);
   }
@@ -612,25 +624,25 @@
 
     let csv = "--- PRODUCTION DATA ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
     prods.forEach(p => {
-      let cleanDate = p.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+      let cleanDate = p.date.replace(/<[^>]*>?/gm, '');
       csv += `"${cleanDate}","${p.item}","${p.qty}","${p.unit || ''}"\n`;
     });
 
-    csv += "\n--- DELIVERY DATA ---\nতারিখ,কাস্টমার,ফোন,আইটেম,পরিমাণ,ইউনিট,মূল্য\n";
+    csv += "\n--- DELIVERY DATA ---\nইনভয়েজ নং,তারিখ,কাস্টমার,ফোন,আইটেম,পরিমাণ,ইউনিট,মূল্য\n";
     delis.forEach(d => {
-      let cleanDate = d.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
-      csv += `"${cleanDate}","${d.name}","${d.phone || ''}","${d.item}","${d.qty}","${d.unit || ''}","${d.amount || 0}"\n`;
+      let cleanDate = d.date.replace(/<[^>]*>?/gm, '');
+      csv += `"${d.invoiceNo}","${cleanDate}","${d.name}","${d.phone || ''}","${d.item}","${d.qty}","${d.unit || ''}","${d.amount || 0}"\n`;
     });
 
     csv += "\n--- RAW MATERIAL IN ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
     rmIns.forEach(r => {
-      let cleanDate = r.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+      let cleanDate = r.date.replace(/<[^>]*>?/gm, '');
       csv += `"${cleanDate}","${r.item}","${r.qty}","${r.unit || ''}"\n`;
     });
 
     csv += "\n--- RAW MATERIAL OUT ---\nতারিখ,আইটেম,পরিমাণ,ইউনিট\n";
     rmOuts.forEach(r => {
-      let cleanDate = r.date.replace('<br><small style="color:#6c757d;">', ' ').replace('</small>', '');
+      let cleanDate = r.date.replace(/<[^>]*>?/gm, '');
       csv += `"${cleanDate}","${r.item}","${r.qty}","${r.unit || ''}"\n`;
     });
 
@@ -671,24 +683,24 @@
     });
     document.getElementById('pTable').innerHTML = pHtml;
 
-    // Group Deliveries by Invoice ID for Display & Messaging
+    // Group Deliveries by Sequential Invoice Number
     let invoiceGroups = {};
     delis.forEach(item => {
-      let invId = item.invoiceId || item.date; // Fallback for older items
-      if(!invoiceGroups[invId]) {
-        invoiceGroups[invId] = {
+      let invNo = item.invoiceNo || '1'; 
+      if(!invoiceGroups[invNo]) {
+        invoiceGroups[invNo] = {
           date: item.date,
           name: item.name,
           phone: item.phone,
           items: []
         };
       }
-      invoiceGroups[invId].items.push(item);
+      invoiceGroups[invNo].items.push(item);
     });
 
     let dHtml = '';
-    Object.keys(invoiceGroups).reverse().forEach(invId => {
-      let group = invoiceGroups[invId];
+    Object.keys(invoiceGroups).sort().reverse().forEach(invNo => {
+      let group = invoiceGroups[invNo];
       let itemsHtml = '<ul style="margin:0; padding-left:15px;">';
       let totalInvAmount = 0;
 
@@ -699,14 +711,14 @@
       itemsHtml += '</ul>';
 
       dHtml += `<tr>
-        <td>${group.date}</td>
+        <td><b>#${invNo}</b><br>${group.date}</td>
         <td><b>${group.name}</b><br><small>${group.phone || ''}</small></td>
         <td>${itemsHtml}</td>
         <td><b>৳${totalInvAmount}</b></td>
         <td>
-          <button class="btn-action btn-wa" onclick="sendWAByInvoice('${invId}')">WhatsApp</button>
-          <button class="btn-action btn-sms" onclick="sendSMSByInvoice('${invId}')">SMS</button>
-          <button class="btn-action btn-del" onclick="delInvoice('${invId}')">Delete</button>
+          <button class="btn-action btn-wa" onclick="sendWAByInvoice('${invNo}')">WhatsApp</button>
+          <button class="btn-action btn-sms" onclick="sendSMSByInvoice('${invNo}')">SMS</button>
+          <button class="btn-action btn-del" onclick="delInvoice('${invNo}')">Delete</button>
         </td>
       </tr>`;
     });
@@ -804,9 +816,8 @@
       }
     });
 
-    let rmSHtml = {};
-    let keys = Object.keys(stockMap);
     let rmSHtmlStr = '';
+    let keys = Object.keys(stockMap);
     if(keys.length === 0) {
       rmSHtmlStr = `<tr><td colspan="4" style="text-align:center; color:#888;">${selectedRMDate ? 'উক্ত তারিখে কোনো ডাটা পাওয়া যায়নি' : 'কোনো র মেটেরিয়াল ডাটা নেই'}</td></tr>`;
     } else {
